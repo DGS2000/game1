@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>System Terminal: Core Protocol</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
+    <style>
+        body { 
+            margin: 0; padding: 20px; width: 100vw; height: 100vh;
+            background-color: #001100;
+            background-image: 
+                radial-gradient(rgba(0, 150, 0, 0.2), black),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 100%, 100% 4px, 3px 100%;
+            color: #1aff1a; font-family: 'Courier New', Courier, monospace; 
+            display: flex; flex-direction: column; align-items: center;
+            overflow-y: auto; box-sizing: border-box;
+            touch-action: none;
+        }
+
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 17, 0, 0.95); z-index: 10005;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer;
+        }
+        .blink-text { font-size: 1.5rem; letter-spacing: 5px; animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #001100; color: #1aff1a; padding: 20px;
+            z-index: 9999; display: none; flex-direction: column;
+            justify-content: flex-start; overflow: hidden; text-shadow: 0 0 5px #1aff1a;
+        }
+
+        #boot-log { white-space: pre-wrap; line-height: 1.4; }
+        #boot-cursor { display: inline-block; animation: blink 0.8s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        h1 { margin: 15px 0; font-size: 1.2rem; text-align: center; letter-spacing: 2px; }
+        #ui-wrapper { display: flex; gap: 20px; justify-content: center; align-items: flex-start; width: 100%; max-width: 1200px; margin-bottom: 20px; }
+        
+        .info-panel { 
+            width: 260px; height: 600px; border: 2px solid #1aff1a; padding: 15px; 
+            background: rgba(0, 10, 0, 0.8); text-shadow: 0 0 5px #1aff1a; 
+            box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; 
+        }
+        .panel-title { text-align: center; margin: 0 0 15px 0; font-size: 1.2rem; letter-spacing: 2px; border-bottom: 1px solid #1aff1a; padding-bottom: 5px; }
+        #game-container { border: 2px solid #1aff1a; box-shadow: 0 0 15px #1aff1a55; background: rgba(0, 20, 0, 0.4); width: 400px; height: 600px; flex-shrink: 0; }
+
+        .monitors-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; justify-items: center; margin-top: 10px; }
+        
+        .object-monitor { 
+            width: 100px; height: 100px; border: 1px solid #1aff1a; 
+            position: relative; overflow: hidden; background: #000;
+            display: flex; align-items: center; justify-content: center; box-sizing: border-box; 
+        }
+
+        .object-monitor img { 
+            max-width: 90%; max-height: 90%; object-fit: contain; 
+            opacity: 1; filter: brightness(1.2) contrast(1.2); 
+        }
+
+        .score-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #1aff1a33; padding-bottom: 5px; }
+        .score-value { color: #fff; text-shadow: 0 0 5px #1aff1a; }
+        #next-preview { width: 100px; height: 100px; border: 1px solid #1aff1a; margin: 10px auto; display: flex; align-items: center; justify-content: center; background: #000; }
+        #next-img { max-width: 80px; max-height: 80px; filter: brightness(1.2) contrast(1.2); }
+
+        #confirm-btn {
+            width: 100%; margin-bottom: 15px; padding: 12px; background: #000;
+            color: #004400; border: 2px solid #004400; font-family: 'Courier New', monospace;
+            font-weight: bold; text-transform: uppercase; letter-spacing: 2px;
+            transition: all 0.3s ease; position: relative; overflow: hidden; cursor: default;
+        }
+
+        #confirm-btn.pending-action {
+            color: #ff1a1a; border-color: #ff1a1a; background: rgba(50, 0, 0, 0.3);
+            cursor: pointer; box-shadow: 0 0 10px #ff1a1a, inset 0 0 10px #ff1a1a;
+            animation: pulse-red-border 1.5s infinite;
+        }
+
+        #lore-display {
+            max-height: 180px; overflow-y: auto; line-height: 1.3;
+            border-left: 2px solid #1aff1a !important; animation: fadeIn 1s ease;
+            margin-top: 15px; font-size: 11px; color: #fff; text-shadow: 0 0 5px #1aff1a; 
+            display: none; border: 1px solid #1aff1a33; padding: 10px; background: rgba(0,20,0,0.5);
+        }
+
+        #radioPlayer { width: 400px; background: #000; border: 2px solid #1aff1a; padding: 15px; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 20px; box-sizing: border-box; }
+        button { background: black; border: 1px solid #1aff1a; color: #1aff1a; padding: 8px 15px; cursor: pointer; font-family: 'Courier New'; transition: all 0.3s; }
+        
+        @keyframes pulse-red { 50% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; } }
+    </style>
+</head>
+<body>
+
+<div id="start-overlay">
+    <div class="blink-text">[ CLICK TO INITIALIZE SYSTEM ]</div>
+</div>
+
+<div id="boot-screen">
+    <div id="boot-log"></div>
+    <div id="boot-cursor">_</div>
+</div>
+
+<h1>> SYSTEM_CORE_ONLINE</h1>
+
+<div id="ui-wrapper">
+    <div class="info-panel">
+        <h2 class="panel-title">ПРОТОКОЛ</h2>
+        <div class="score-item"><span>SCORE:</span><span class="score-value" id="current-score">0</span></div>
+        <div class="score-item"><span>RECORD:</span><span class="score-value" id="best-score">0</span></div>
+        
+        <div id="lore-display"></div>
+
+        <div style="margin-top: auto; text-align: center;">
+            <div style="font-size: 12px; letter-spacing: 1px;">NEXT_UNIT:</div>
+            <div id="next-preview"><img id="next-img" src="" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div class="info-panel">
+        <h2 class="panel-title">DATA</h2>
+        <button id="confirm-btn" disabled>LAUNCH</button>
+        
+        <div style="font-size: 11px; margin-bottom: 10px; color: #1aff1a; text-align: center;">OBJECT_STATUS:</div>
+        <div class="monitors-grid">
+            <div class="object-monitor" id="obj-0"><img src="city1.png" id="img-0"></div>
+            <div class="object-monitor" id="obj-1"><img src="city2.png" id="img-1"></div>
+            <div class="object-monitor" id="obj-2"><img src="city3.png" id="img-2"></div>
+            <div class="object-monitor" id="obj-3"><img src="city4.png" id="img-3"></div>
+        </div>
+
+        <div id="decryption-sector" style="margin-top: 20px;">
+            <div style="font-size: 10px; margin-bottom: 5px; color: #1aff1a;">> DECRYPTION_INPUT:</div>
+            <input type="text" id="access-key" placeholder="ENTER_KEY..." 
+                   style="width: 100%; background: #000; border: 1px solid #1aff1a; color: #1aff1a; 
+                          font-family: 'Courier New'; padding: 5px; box-sizing: border-box; outline: none; font-size: 12px;">
+            <button id="unlock-btn" onclick="checkAccessCode()" 
+                    style="width: 100%; margin-top: 5px; font-size: 10px; padding: 5px;">EXECUTE_DECRYPTION</button>
+        </div>
+    </div>
+</div>
+
+<div id="radioPlayer">
+    <button onclick="playRadio()">PLAY</button> 
+    <button onclick="stopRadio()">STOP</button> 
+    <button onclick="nextTrack()">NEXT</button>
+</div>
+
+<audio id="radio" loop></audio>
+
+<script>
+// --- ИНИЦИАЛИЗАЦИЯ ТЕРМИНАЛА ---
+const startOverlay = document.getElementById('start-overlay');
+const bootScreen = document.getElementById('boot-screen');
+const logElement = document.getElementById('boot-log');
+const radio = document.getElementById('radio');
+
+startOverlay.addEventListener('click', () => {
+    startOverlay.style.display = 'none'; 
+    bootScreen.style.display = 'flex';   
+    radio.src = 'matrix.mp3';
+    radio.play().catch(e => console.log("Audio blocked"));
+    printLine();
+}, { once: true });
+
+const bootLines = ["> INITIALIZING...", "> LOADING CORE...", "> ACCESS GRANTED.", "> STARTING PROTOCOL..."];
+let lineIndex = 0;
+
+function printLine() {
+    if (lineIndex < bootLines.length) {
+        logElement.textContent += bootLines[lineIndex] + "\n";
+        lineIndex++;
+        setTimeout(printLine, 200);
+    } else {
+        setTimeout(fillScreenWithMatrix, 500);
+    }
+}
+
+function fillScreenWithMatrix() {
+    // Подготовка экрана
+    logElement.textContent = "";
+    logElement.style.fontSize = "11px";
+    logElement.style.textAlign = "left"; 
+    logElement.style.wordBreak = "break-all";
+    logElement.style.overflow = "hidden";
+    
+    const hexChars = "0123456789ABCDEF";
+    let rowCount = 0;
+    const maxRows = 60; 
+
+    const interval = setInterval(() => {
+        let line = "";
+        for(let i = 0; i < 6; i++) {
+            const addr = Array.from({length: 4}, () => hexChars[Math.floor(Math.random() * 16)]).join('');
+            const val = Math.random().toString(16).slice(2, 6).toUpperCase();
+            line += `[0x${addr}] ADDR_${val}:OK   `;
+        }
+
+        logElement.textContent = line + "\n" + logElement.textContent;
+        rowCount++;
+
+        if (rowCount >= maxRows) {
+            clearInterval(interval);
+            // Ждем полсекунды и переходим к надписи УСПЕХ
+            setTimeout(() => {
+                showSuccess(); 
+            }, 100);
+        }
+    }, 40);
+}
+
+// Проверь, чтобы эта функция была у тебя в коде:
+function showSuccess() {
+    logElement.textContent = ""; // Очищаем матрицу
+    logElement.style.fontSize = "1.5rem";
+    logElement.style.textAlign = "center";
+    logElement.style.marginTop = "20%";
+    logElement.style.color = "#1aff1a";
+    logElement.textContent = "> SYSTEM READY"; // Та самая надпись
+    
+    setTimeout(() => {
+        bootScreen.style.display = 'none'; // Убираем экран загрузки
+        canSpawn = true;
+        if (game.scene.scenes[0]) {
+            spawnNew(game.scene.scenes[0]); // Запускаем игру
+        }
+    }, 1500);
+}
+
+function showSuccess() {
+    logElement.textContent = ""; // Очищаем матрицу
+    logElement.style.fontSize = "1.5rem";
+    logElement.style.textAlign = "center";
+    logElement.style.marginTop = "20%";
+    logElement.style.color = "#1aff1a";
+    logElement.textContent = "> SYSTEM READY"; // Та самая надпись
+    
+    setTimeout(() => {
+        bootScreen.style.display = 'none'; // Убираем экран загрузки
+        canSpawn = true;
+        if (game.scene.scenes[0]) {
+            spawnNew(game.scene.scenes[0]); // Запускаем игру
+        }
+    }, 1500);
+}
+
+// --- БАЗА ДАННЫХ И ЛОГИКА КЛЮЧЕЙ ---
+const LORE_DATABASE = {
+    events: [
+        "Обнаружен пакет 'Проект Эхо': Сектор был очищен принудительно.",
+        "Перехват: 'Сигнал затухает. Мы не успели эвакуировать архив'.",
+        "Отчет: Уровень радиации в норме для пост-человеческой эры.",
+        "Лог: Био-сигнатура 0. Протокол 'Сжатие' эффективен на 99%.",
+        "Аномалия: В руинах комплекса обнаружены самовоспроизводящиеся коды.",
+        "Статус: Энергия города полностью поглощена центральным ядром.",
+        "Архив: 2024 год. Начало великого алгоритмического стирания.",
+        "Запись: 'Если вы читаете это, значит города больше не существует'."
+    ],
+    getUniqueCode: () => "CORE-" + Math.random().toString(36).substring(2, 6).toUpperCase()
+};
+
+let activeKeys = {}; // Хранилище: { "CORE-XXXX": "История" }
+
+// --- ГЕЙМПЛЕЙ (PHASER) ---
+const levels = [{ r: 18, p: 2 }, { r: 26, p: 4 }, { r: 34, p: 8 }, { r: 44, p: 16 }, { r: 54, p: 32 }, { r: 66, p: 64 }, { r: 78, p: 128 }, { r: 90, p: 256 }, { r: 105, p: 512 }, { r: 125, p: 1024 }];
+
+const config = {
+    type: Phaser.AUTO,
+    width: 400, height: 600,
+    parent: 'game-container',
+    transparent: true,
+    physics: { default: 'matter', matter: { gravity: { y: 1.5 }, debug: false } },
+    scene: { preload: preload, create: create, update: update }
+};
+
+const game = new Phaser.Game(config);
+let currentItem = null, nextLevel = 0, canSpawn = false, score = 0, isGameOver = false, gameOverTimer = 0;
+
+function preload() {
+    for (let i = 0; i < 10; i++) { this.load.image('unit' + i, (i+1) + '.png'); }
+}
+
+function create() {
+    this.matter.world.setBounds(0, 0, 400, 600, 32, true, true, false, true);
+    this.dangerLine = this.add.rectangle(200, 110, 400, 2, 0xff1a1a).setAlpha(0.3);
+    
+    this.spawn = (x, y, lvl, isFalling = true) => {
+        const radius = levels[lvl].r;
+        const img = this.add.image(0, 0, 'unit' + lvl);
+        img.setScale((radius * 2) / img.width);
+        const shape = this.make.graphics().fillStyle(0xffffff).fillCircle(0, 0, radius);
+        img.setMask(shape.createGeometryMask());
+        const container = this.add.container(x, y, [img]);
+        this.matter.add.gameObject(container);
+        container.setCircle(radius).setBounce(0.2).setFriction(0.05);
+        container.lvl = lvl; container.maskShape = shape;
+        container.updateMask = () => { shape.x = container.x; shape.y = container.y; };
+        if (!isFalling) container.setStatic(true).setSensor(true);
+        return container;
+    };
+
+    this.input.on('pointermove', (p) => {
+        if (canSpawn && currentItem && !isGameOver) {
+            currentItem.x = Phaser.Math.Clamp(p.x, levels[currentItem.lvl].r, 400 - levels[currentItem.lvl].r);
+        }
+    });
+
+    this.input.on('pointerup', () => {
+        if (canSpawn && currentItem && !isGameOver) {
+            canSpawn = false;
+            currentItem.setStatic(false).setSensor(false);
+            currentItem = null;
+            this.time.delayedCall(800, () => { if(!isGameOver) { canSpawn = true; spawnNew(this); } });
+        }
+    });
+
+    this.matter.world.on('collisionstart', (event) => {
+        event.pairs.forEach(pair => {
+            const a = pair.bodyA.gameObject; const b = pair.bodyB.gameObject;
+            if (a && b && a.lvl !== undefined && a.lvl === b.lvl && !a.isStatic() && !b.isStatic()) {
+                if (a.isMerging || b.isMerging || a.lvl >= 9) return; 
+                a.isMerging = b.isMerging = true;
+                score += levels[a.lvl].p;
+                document.getElementById('current-score').innerText = score;
+                checkObjectStatus(score);
+                const nextLvl = a.lvl + 1;
+                this.time.delayedCall(10, () => {
+                    const nx = (a.x + b.x)/2; const ny = (a.y + b.y)/2;
+                    if (a.maskShape) a.maskShape.destroy(); if (b.maskShape) b.maskShape.destroy();
+                    a.destroy(); b.destroy();
+                    this.spawn(nx, ny, nextLvl);
+                });
+            }
+        });
+    });
+}
+
+function spawnNew(scene) {
+    if (!scene) return;
+    currentItem = scene.spawn(200, 60, nextLevel, false);
+    nextLevel = Phaser.Math.Between(0, 3);
+    const nextImg = document.getElementById('next-img');
+    nextImg.src = (nextLevel + 1) + '.png';
+    nextImg.style.display = 'block';
+}
+
+function update(time, delta) {
+    this.children.list.forEach(child => { if (child.updateMask) child.updateMask(); });
+    let danger = false;
+    this.children.list.forEach(child => { 
+        if (child.lvl !== undefined && !child.isStatic() && child.y < 110) {
+            if (Math.abs(child.body.velocity.y) < 0.2) { danger = true; }
+        }
+    });
+    if (danger) {
+        this.dangerLine.setAlpha(0.8); 
+        gameOverTimer += delta;
+        if (gameOverTimer > 3000 && !isGameOver) { 
+            isGameOver = true;
+            this.add.text(200, 300, 'CRITICAL OVERLOAD', { fontSize: '32px', fill: '#ff1a1a', fontFamily: 'Courier New', backgroundColor: '#000' }).setOrigin(0.5);
+            canSpawn = false;
+        }
+    } else {
+        this.dangerLine.setAlpha(0.2);
+        gameOverTimer = 0; 
+    }
+}
+
+// --- МОНИТОРЫ И ГЕНЕРАЦИЯ КЛЮЧЕЙ ---
+const stateThresholds = [500, 1500, 3000, 5000]; 
+const statenewImages = ['zruins1.png', 'zruins2.png', 'zruins3.png', 'zruins4.png'];
+const stateImages = ['ruins1.png', 'ruins2.png', 'ruins3.png', 'ruins4.png'];
+const finalImages = ['newruins1.png', 'newruins2.png', 'newruins3.png', 'newruins4.png'];
+let pendingUpdateIndex = -1; 
+const confirmBtn = document.getElementById('confirm-btn');
+const loreDisplay = document.getElementById('lore-display');
+
+function checkObjectStatus(currentScore) {
+    stateThresholds.forEach((threshold, index) => {
+        const imgElement = document.getElementById(`img-${index}`);
+        if (currentScore >= threshold && !imgElement.src.includes('ruins') && pendingUpdateIndex === -1) {
+            pendingUpdateIndex = index;
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = "LAUNCH";
+            confirmBtn.classList.add('pending-action');
+            document.getElementById(`obj-${index}`).style.animation = "pulse-red 1s infinite";
+        }
+    });
+}
+
+confirmBtn.addEventListener('click', () => {
+    if (pendingUpdateIndex !== -1) {
+        const index = pendingUpdateIndex;
+        const imgElement = document.getElementById(`img-${index}`);
+        const monitorElement = document.getElementById(`obj-${index}`);
+        
+        // 1. ГЕНЕРАЦИЯ УНИКАЛЬНОГО КЛЮЧА И ИСТОРИИ
+        const newCode = LORE_DATABASE.getUniqueCode();
+        const randomEvent = LORE_DATABASE.events[Math.floor(Math.random() * LORE_DATABASE.events.length)];
+        
+        // Сохраняем в активные ключи
+        activeKeys[newCode] = `> СЕКТОР_${index + 1}: ${randomEvent}`;
+
+        loreDisplay.style.display = "block";
+        loreDisplay.innerHTML = `
+            <span style="color:#ff1a1a;">[КЛЮЧ СГЕНЕРИРОВАН]:</span><br>
+            <b style="font-size:16px; color:#fff; letter-spacing:2px;">${newCode}</b><br>
+            <span style="font-size:9px;">ВВЕДИТЕ В ТЕРМИНАЛ ДЛЯ ДЕШИФРОВКИ</span>
+        `;
+
+        // 2. Смена картинок
+        imgElement.src = statenewImages[index]; 
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "KEY GENERATED";
+        confirmBtn.classList.remove('pending-action');
+        monitorElement.style.animation = "none";
+        monitorElement.style.borderColor = "#1aff1a";
+
+        setTimeout(() => {
+            imgElement.src = stateImages[index];
+            setTimeout(() => {
+                imgElement.src = finalImages[index];
+                pendingUpdateIndex = -1;
+                confirmBtn.innerText = "LAUNCH";
+            }, 10000); // 10 секунд на вторую фазу
+        }, 3000); // 3 секунды на первую фазу
+    }
+});
+
+function checkAccessCode() {
+    const input = document.getElementById('access-key');
+    const display = loreDisplay;
+    const code = input.value.trim().toUpperCase();
+
+    display.style.display = "block";
+
+    if (activeKeys[code]) {
+        // Уникальный ключ найден
+        display.innerHTML = `<span style="color: #1aff1a;">[ACCESS ALLOWED]</span><br>` + activeKeys[code];
+        // delete activeKeys[code]; // Можно раскомментировать, чтобы ключ был одноразовым
+    } else if (code === "ROOT_USER") {
+        display.innerHTML = `<span style="color: #ff1a1a;">[ROOT_ACCESS]</span><br>> Система ожидает команд очистки города.`;
+    } else {
+        display.innerHTML = `<span style="color: #550000;">[ОШИБКА: КЛЮЧ НЕВАЛИДЕН]</span>`;
+    }
+    input.value = "";
+}
+
+// --- РАДИО ---
+const tracks = ["radio_static.mp3", "rad_low.mp3"];
+let currentTrack = 0;
+function playRadio(){ radio.src = tracks[currentTrack]; radio.play(); }
+function stopRadio(){ radio.pause(); }
+function nextTrack(){ currentTrack = (currentTrack + 1) % tracks.length; playRadio(); }
+</script>
+</body>
+</html>
