@@ -8,19 +8,21 @@
     <style>
         
         body { 
-            margin: 0; padding: 20px; width: 100vw; height: 100vh;
-            background-color: #001100;
-            background-image: 
-                radial-gradient(rgba(0, 150, 0, 0.2), black),
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
-                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 100%, 100% 4px, 3px 100%;
-            color: #1aff1a; font-family: 'Courier New', Courier, monospace; 
-            display: flex; flex-direction: column; align-items: center;
-            overflow-y: auto; box-sizing: border-box;
-            touch-action: none;
-        }
-
+    margin: 0; padding: 20px; width: 100vw; 
+    /* height: 100vh; — УДАЛИ ЭТУ СТРОКУ или замени на min-height */
+    min-height: 100vh; 
+    background-color: #001100;
+    background-image: 
+        radial-gradient(rgba(0, 150, 0, 0.2), black),
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 100%, 100% 4px, 3px 100%;
+    color: #1aff1a; font-family: 'Courier New', Courier, monospace; 
+    display: flex; flex-direction: column; align-items: center;
+    overflow-y: auto; box-sizing: border-box;
+    /* touch-action: none; — ЗАМЕНИ НА: */
+    touch-action: pan-y; 
+}
         #start-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 17, 0, 0.95); z-index: 10005;
@@ -45,11 +47,13 @@
         #ui-wrapper { display: flex; gap: 20px; justify-content: center; align-items: flex-start; width: 100%; max-width: 1200px; margin-bottom: 20px; }
         
         .info-panel { 
+            touch-action: pan-y;
             width: 260px; height: 600px; border: 2px solid #1aff1a; padding: 15px; 
             background: rgba(0, 10, 0, 0.8); text-shadow: 0 0 5px #1aff1a; 
             box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; 
         }
         .panel-title { text-align: center; margin: 0 0 15px 0; font-size: 1.2rem; letter-spacing: 2px; border-bottom: 1px solid #1aff1a; padding-bottom: 5px; }
+        
         #game-container { 
     border: 2px solid #1aff1a; 
     box-shadow: 0 0 15px #1aff1a55; 
@@ -57,17 +61,37 @@
     width: 400px; 
     height: 600px; 
     flex-shrink: 0; 
-    overflow: hidden; /* Добавь эту строку */
-    position: relative; /* Для корректного позиционирования холста */
-        }
+    overflow: hidden; 
+    position: relative; 
+    /* Здесь запрещаем скролл, чтобы не дергался экран во время игры */
+    touch-action: none; 
+    aspect-ratio: 400 / 600; /* Гарантирует пропорции */
+    max-height: 90vh; /* Чтобы игра не уходила за пределы экрана по высоте */
+    }
 
-        .monitors-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; justify-items: center; margin-top: 10px; }
+        .monitors-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 10px; 
+    justify-items: center; 
+    margin-top: 10px;
+    width: 100%; /* Чтобы не вылезала за пределы панели */
+    box-sizing: border-box;
+}
         
         .object-monitor { 
-            width: 100px; height: 100px; border: 1px solid #1aff1a; 
-            position: relative; overflow: hidden; background: #000;
-            display: flex; align-items: center; justify-content: center; box-sizing: border-box; 
-        }
+    width: 100%;       /* Растягивается по колонке */
+    max-width: 100px;  /* Но не больше 100px */
+    aspect-ratio: 1/1; /* Всегда квадрат */
+    border: 1px solid #1aff1a; 
+    position: relative; 
+    overflow: hidden; 
+    background: #000;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    box-sizing: border-box; 
+}
 
         .object-monitor img { 
             max-width: 90%; max-height: 90%; object-fit: contain; 
@@ -109,81 +133,76 @@
 @media screen and (max-width: 1000px) {
     #ui-wrapper {
         flex-direction: column;
-        align-items: center;
-        gap: 15px;
+        align-items: center; /* Центрируем всё, что внутри колонки */
+        gap: 20px;
     }
 
     .info-panel {
-        width: 400px; /* Ширина под размер игрового контейнера */
+        /* Панели теперь занимают ту же ширину, что и игра */
+        width: 400px; 
+        max-width: 95vw;
         height: auto;
-        min-height: 200px;
+        min-height: 120px;
         order: 2; /* Панели уходят под игру */
     }
 
     #game-container {
-        order: 1; /* Игра сверху */
+        order: 1; /* Игра всегда первая (сверху) */
+        width: 400px;
+        max-width: 95vw;
+    }
+
+    /* Сетка мониторов на планшетах в 4 колонки, чтобы не занимать много места по вертикали */
+    .monitors-grid {
+        grid-template-columns: repeat(4, 1fr);
+        width: 100%;
     }
 }
 
 /* Мобильные устройства (до 450px) */
 @media screen and (max-width: 450px) {
-    body {
-        padding: 5px;
-        overflow-x: hidden;
+    #game-container {
+        /* Соотношение сторон 4:6 сохраняется автоматически через aspect-ratio */
+        width: 95vw !important;
+        height: auto !important;
+        max-width: 380px;
+    }
+
+    .info-panel {
+        width: 95vw !important;
+        max-width: 380px;
+        padding: 10px;
     }
 
     h1 {
         font-size: 0.9rem;
-        margin: 5px 0;
     }
 
-    #ui-wrapper {
-        gap: 10px;
-        /* Убираем transform scale, так как он ломает физику Matter.js */
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    .panel-title {
+        font-size: 1rem;
+        margin-bottom: 10px;
     }
 
-    #game-container, .info-panel {
-        /* Делаем ширину адаптивной под экран */
-        width: 95vw !important; 
-        max-width: 380px;
-        height: auto;
-    }
-
-    /* Чтобы Phaser внутри контейнера не обрезался */
-    #game-container {
-        aspect-ratio: 400 / 600; 
-        height: auto !important;
-    }
-
-    .info-panel {
-        min-height: 150px;
-        padding: 10px;
-    }
-
+    /* Уменьшаем сетку для очень маленьких экранов, если нужно */
     .monitors-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 5px;
-    }
-
-    .object-monitor {
-        width: 100%; /* Заполнит колонку сетки */
-        aspect-ratio: 1/1;
-        height: auto;
-    }
-
-    #radioPlayer {
-        width: 95vw;
-        padding: 10px;
-        gap: 5px;
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 8px;
     }
     
-    button {
-        padding: 5px 10px;
-        font-size: 10px;
+    #radioPlayer {
+        width: 95vw;
+    }
+}
+
+/* Фикс для горизонтального режима (Landscape) на телефонах */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+    body {
+        padding: 5px;
+    }
+    #ui-wrapper {
+        flex-direction: row; /* Возвращаем в ряд, если экран очень низкий */
+        transform: scale(0.7);
+        transform-origin: top center;
     }
 }
 
@@ -193,6 +212,28 @@
         transform: scale(0.6);
         margin-top: -100px;
     }
+}
+
+.copy-btn {
+    cursor: pointer;
+    margin-left: 10px;
+    padding: 2px 5px;
+    border: 1px solid #1aff1a;
+    background: transparent;
+    color: #1aff1a;
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+    transition: all 0.2s;
+    vertical-align: middle;
+}
+
+.copy-btn:hover {
+    background: #1aff1a;
+    color: #000;
+}
+
+.copy-btn:active {
+    transform: scale(0.9);
 }
     </style>
 
@@ -239,13 +280,16 @@
         </div>
 
         <div id="decryption-sector" style="margin-top: 20px;">
-            <div style="font-size: 10px; margin-bottom: 5px; color: #1aff1a;">> DECRYPTION_INPUT:</div>
-            <input type="text" id="access-key" placeholder="ENTER_KEY..." 
-                   style="width: 100%; background: #000; border: 1px solid #1aff1a; color: #1aff1a; 
-                          font-family: 'Courier New'; padding: 5px; box-sizing: border-box; outline: none; font-size: 12px;">
-            <button id="unlock-btn" onclick="checkAccessCode()" 
-                    style="width: 100%; margin-top: 5px; font-size: 10px; padding: 5px;">EXECUTE_DECRYPTION</button>
-        </div>
+    <div style="font-size: 10px; margin-bottom: 5px; color: #1aff1a;">> DECRYPTION_INPUT:</div>
+    <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 5px;">
+        <input type="text" id="access-key" placeholder="ENTER_KEY..." 
+               style="flex-grow: 1; background: #000; border: 1px solid #1aff1a; color: #1aff1a; 
+                      font-family: 'Courier New'; padding: 5px; box-sizing: border-box; outline: none; font-size: 12px;">
+        <button class="copy-btn" onclick="pasteKeyFromClipboard()" style="margin: 0; padding: 5px;">[PASTE]</button>
+    </div>
+    <button id="unlock-btn" onclick="checkAccessCode()" 
+            style="width: 100%; font-size: 10px; padding: 5px;">EXECUTE_DECRYPTION</button>
+</div>
     </div>
 </div>
 
@@ -377,14 +421,13 @@ const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
     transparent: true,
-    // --- ДОБАВЬ ЭТОТ БЛОК ---
     scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 400,
-        height: 600
-    },
-    // ------------------------
+    mode: Phaser.Scale.FIT, // FIT лучше всего подходит для игр с фиксированным соотношением сторон (400x600)
+    parent: 'game-container',
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 400,
+    height: 600
+},
     physics: { 
         default: 'matter', 
         matter: { 
@@ -403,6 +446,7 @@ function preload() {
 }
 
 function create() {
+    this.input.addPointer(1);
     this.matter.world.setBounds(0, 0, 400, 595, 100, true, true, false, true);
     this.dangerLine = this.add.rectangle(200, 110, 400, 2, 0xff1a1a).setAlpha(0.3);
     
@@ -421,11 +465,16 @@ function create() {
         return container;
     };
 
-    this.input.on('pointermove', (p) => {
-        if (canSpawn && currentItem && !isGameOver) {
-            currentItem.x = Phaser.Math.Clamp(p.x, levels[currentItem.lvl].r, 400 - levels[currentItem.lvl].r);
-        }
-    });
+this.input.on('pointermove', (p) => {
+    if (canSpawn && currentItem && !isGameOver) {
+        // Получаем точку внутри игрового мира, игнорируя масштаб и отступы в HTML
+        const worldPoint = this.cameras.main.getWorldPoint(p.x, p.y);
+        
+        // Ограничиваем движение строго по ширине (0 - 400)
+        const halfWidth = levels[currentItem.lvl].r;
+        currentItem.x = Phaser.Math.Clamp(worldPoint.x, halfWidth, 400 - halfWidth);
+    }
+});
 
     this.input.on('pointerup', () => {
         if (canSpawn && currentItem && !isGameOver) {
@@ -525,10 +574,11 @@ confirmBtn.addEventListener('click', () => {
 
         loreDisplay.style.display = "block";
         loreDisplay.innerHTML = `
-            <span style="color:#ff1a1a;">[КЛЮЧ СГЕНЕРИРОВАН]:</span><br>
-            <b style="font-size:16px; color:#fff; letter-spacing:2px;">${newCode}</b><br>
-            <span style="font-size:9px;">ВВЕДИТЕ В ТЕРМИНАЛ ДЛЯ ДЕШИФРОВКИ</span>
-        `;
+    <span style="color:#ff1a1a;">[КЛЮЧ СГЕНЕРИРОВАН]:</span><br>
+    <b id="key-text" style="font-size:16px; color:#fff; letter-spacing:2px;">${newCode}</b>
+    <button class="copy-btn" onclick="copyKeyToClipboard('${newCode}')">[COPY]</button><br>
+    <span style="font-size:9px;">ВВЕДИТЕ В ТЕРМИНАЛ ДЛЯ ДЕШИФРОВКИ</span>
+`;
 
         // 2. Смена картинок
         imgElement.src = statenewImages[index]; 
@@ -574,6 +624,39 @@ let currentTrack = 0;
 function playRadio(){ radio.src = tracks[currentTrack]; radio.play(); }
 function stopRadio(){ radio.pause(); }
 function nextTrack(){ currentTrack = (currentTrack + 1) % tracks.length; playRadio(); }
+function copyKeyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Визуальный фидбек на кнопке
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "[DONE]";
+        btn.style.borderColor = "#fff";
+        
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.borderColor = "#1aff1a";
+        }, 1000);
+    }).catch(err => {
+        console.error('Ошибка копирования: ', err);
+    });
+}
+async function pasteKeyFromClipboard() {
+    try {
+        const text = await navigator.clipboard.readText();
+        const input = document.getElementById('access-key');
+        input.value = text.trim().toUpperCase();
+        
+        // Визуальный эффект "подсветки" при вставке
+        input.style.backgroundColor = "rgba(26, 255, 26, 0.2)";
+        setTimeout(() => {
+            input.style.backgroundColor = "#000";
+        }, 200);
+    } catch (err) {
+        console.error('Не удалось прочитать буфер обмена: ', err);
+        // На некоторых мобильных устройствах доступ к буферу может быть заблокирован
+        alert("Доступ к буферу отклонен. Вставьте код вручную.");
+    }
+}
 </script>
 </body>
 </html>
