@@ -6,6 +6,7 @@
     <title>System Terminal: Core Protocol</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
     <style>
+        
         body { 
             margin: 0; padding: 20px; width: 100vw; height: 100vh;
             background-color: #001100;
@@ -49,7 +50,16 @@
             box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; 
         }
         .panel-title { text-align: center; margin: 0 0 15px 0; font-size: 1.2rem; letter-spacing: 2px; border-bottom: 1px solid #1aff1a; padding-bottom: 5px; }
-        #game-container { border: 2px solid #1aff1a; box-shadow: 0 0 15px #1aff1a55; background: rgba(0, 20, 0, 0.4); width: 400px; height: 600px; flex-shrink: 0; }
+        #game-container { 
+    border: 2px solid #1aff1a; 
+    box-shadow: 0 0 15px #1aff1a55; 
+    background: rgba(0, 20, 0, 0.4); 
+    width: 400px; 
+    height: 600px; 
+    flex-shrink: 0; 
+    overflow: hidden; /* Добавь эту строку */
+    position: relative; /* Для корректного позиционирования холста */
+        }
 
         .monitors-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; justify-items: center; margin-top: 10px; }
         
@@ -93,7 +103,99 @@
         button { background: black; border: 1px solid #1aff1a; color: #1aff1a; padding: 8px 15px; cursor: pointer; font-family: 'Courier New'; transition: all 0.3s; }
         
         @keyframes pulse-red { 50% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; } }
+        /* --- АДАПТАЦИЯ (RESPONSIVE DESIGN) --- */
+
+/* Планшеты и малые экраны (до 1000px) */
+@media screen and (max-width: 1000px) {
+    #ui-wrapper {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .info-panel {
+        width: 400px; /* Ширина под размер игрового контейнера */
+        height: auto;
+        min-height: 200px;
+        order: 2; /* Панели уходят под игру */
+    }
+
+    #game-container {
+        order: 1; /* Игра сверху */
+    }
+}
+
+/* Мобильные устройства (до 450px) */
+@media screen and (max-width: 450px) {
+    body {
+        padding: 5px;
+        overflow-x: hidden;
+    }
+
+    h1 {
+        font-size: 0.9rem;
+        margin: 5px 0;
+    }
+
+    #ui-wrapper {
+        gap: 10px;
+        /* Убираем transform scale, так как он ломает физику Matter.js */
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #game-container, .info-panel {
+        /* Делаем ширину адаптивной под экран */
+        width: 95vw !important; 
+        max-width: 380px;
+        height: auto;
+    }
+
+    /* Чтобы Phaser внутри контейнера не обрезался */
+    #game-container {
+        aspect-ratio: 400 / 600; 
+        height: auto !important;
+    }
+
+    .info-panel {
+        min-height: 150px;
+        padding: 10px;
+    }
+
+    .monitors-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+    }
+
+    .object-monitor {
+        width: 100%; /* Заполнит колонку сетки */
+        aspect-ratio: 1/1;
+        height: auto;
+    }
+
+    #radioPlayer {
+        width: 95vw;
+        padding: 10px;
+        gap: 5px;
+    }
+    
+    button {
+        padding: 5px 10px;
+        font-size: 10px;
+    }
+}
+
+/* Исправление для очень низких экранов (Landscape mode на телефонах) */
+@media screen and (max-height: 600px) {
+    #ui-wrapper {
+        transform: scale(0.6);
+        margin-top: -100px;
+    }
+}
     </style>
+
 </head>
 <body>
 
@@ -273,10 +375,23 @@ const levels = [{ r: 18, p: 2 }, { r: 26, p: 4 }, { r: 34, p: 8 }, { r: 44, p: 1
 
 const config = {
     type: Phaser.AUTO,
-    width: 400, height: 600,
     parent: 'game-container',
     transparent: true,
-    physics: { default: 'matter', matter: { gravity: { y: 1.5 }, debug: false } },
+    // --- ДОБАВЬ ЭТОТ БЛОК ---
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 400,
+        height: 600
+    },
+    // ------------------------
+    physics: { 
+        default: 'matter', 
+        matter: { 
+            gravity: { y: 1.5 }, 
+            debug: false 
+        } 
+    },
     scene: { preload: preload, create: create, update: update }
 };
 
@@ -288,7 +403,7 @@ function preload() {
 }
 
 function create() {
-    this.matter.world.setBounds(0, 0, 400, 600, 32, true, true, false, true);
+    this.matter.world.setBounds(0, 0, 400, 595, 100, true, true, false, true);
     this.dangerLine = this.add.rectangle(200, 110, 400, 2, 0xff1a1a).setAlpha(0.3);
     
     this.spawn = (x, y, lvl, isFalling = true) => {
