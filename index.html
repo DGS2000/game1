@@ -221,6 +221,12 @@ async function runBootSequence() {
 
 // --- ИГРОВАЯ ЛОГИКА ---
 async function initGame() {
+    // Проверка: загрузилась ли библиотека вообще?
+    if (typeof PIXI === 'undefined') {
+        console.error("CRITICAL: PixiJS не загружен! Проверь интернет-соединение или смени CDN.");
+        logElement.textContent += "\n[ERROR]: PIXI_MODULE_NOT_FOUND\n";
+        return;
+    }
     app = new PIXI.Application({
         width: 400, height: 600, backgroundAlpha: 0, antialias: true,
         resolution: window.devicePixelRatio || 2, autoDensity: true
