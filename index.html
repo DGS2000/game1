@@ -7,6 +7,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
+        /* Мигание для контейнера игры */
+#game-container.warning-flash {
+    animation: pulse-panel-red 1s infinite !important;
+    border-width: 2px;
+}
+        /* Эффект для всей панели, когда она должна мигать */
+.info-panel.warning-flash {
+    animation: pulse-panel-red 1s infinite !important;
+    border-width: 2px;
+}
+
+/* Сама анимация пульсации для границ блока */
+@keyframes pulse-panel-red {
+    0% { border-color: #1aff1a; box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); }
+    50% { border-color: #ff1a1a; box-shadow: 0 0 20px rgba(255, 26, 26, 0.8); }
+    100% { border-color: #1aff1a; box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); }
+}
+
+/* Исправим также анимацию для города, чтобы она была заметнее */
+@keyframes pulse-red {
+    50% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+}
         body { 
             margin: 0; padding: 20px; width: 100vw; min-height: 100vh; 
             background-color: #001100;
@@ -57,12 +79,30 @@
 
         #game-container canvas { display: block; width: 100%; height: 100%; }
 
-        .monitors-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .monitors-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 12px; 
+    margin-top: 15px;
+    justify-items: center; 
+}
         .object-monitor { 
-            width: 100%; aspect-ratio: 1/1; border: 1px solid #1aff1a; 
-            background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden;
-        }
-        .object-monitor img { max-width: 90%; max-height: 90%; filter: brightness(1.2); }
+    width: 110px;  /* Фиксированная ширина как у NEXT_UNIT */
+    height: 110px; /* Фиксированная высота */
+    border: 1px solid #1aff1a; 
+    background: #000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    overflow: hidden;
+    box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); /* Легкое свечение */
+}
+        .object-monitor img { 
+    max-width: 95px;  /* Ограничиваем размер картинки внутри */
+    max-height: 95px; 
+    filter: brightness(1.2) contrast(1.1); /* Делаем чуть четче */
+    object-fit: contain;
+}
 
         .score-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #1aff1a33; }
         
@@ -123,6 +163,7 @@
         width: 100% !important;
         height: 100% !important;
     }
+
 }
     </style>
 </head>
@@ -140,7 +181,7 @@
 
 <div id="ui-wrapper">
     <div class="info-panel">
-        <h2 class="panel-title">ПРОТОКОЛ</h2>
+        <h2 class="panel-title">PROTOCOL</h2>
         <div class="score-item"><span>SCORE:</span><span id="current-score">0</span></div>
         <div class="score-item"><span>RECORD:</span><span id="best-score">0</span></div>
         
@@ -196,11 +237,11 @@ const levels = [
 
 const LORE_DATABASE = {
     events: [
-        "Обнаружен пакет 'Проект Эхо': Сектор был очищен принудительно.",
-        "Перехват: 'Сигнал затухает. Мы не успели эвакуировать архив'.",
-        "Отчет: Уровень радиации в норме для пост-человеческой эры.",
-        "Лог: Био-сигнатура 0. Протокол 'Сжатие' эффективен на 99%.",
-        "Аномалия: В руинах комплекса обнаружены самовоспроизводящиеся коды."
+        "Project Echo detected: Sector purged by automated defense protocol.",
+        "Intercept: 'Signal fading. Archive evacuation failed. God save us.'",
+        "Radiation report: Levels stabilized for post-human habitation.",
+        "Log: Bio-signature 0. Protocol 'Compression' efficiency at 99.8%.",
+        "Anomaly detected: Self-replicating code found in complex ruins."
     ],
     getUniqueCode: () => "CORE-" + Math.random().toString(36).substring(2, 6).toUpperCase()
 };
@@ -402,8 +443,30 @@ function createBall(x, y, lvl, isFalling) {
     const body = Matter.Bodies.circle(x, y, radius, {
         restitution: 0.3, isStatic: !isFalling, isSensor: !isFalling
     });
-    body.lvl = lvl; body.sprite = container;
+    body.lvl = lvl; 
+    body.sprite = container;
     Matter.World.add(world, body);
+
+    // --- ЛОГИКА УДАЛЕНИЯ 9-го ШАРИКА ---
+    // Если уровень шарика 8 (это 9-й по счету, так как отсчет от 0)
+    if (lvl === 8 && isFalling) {
+        setTimeout(() => {
+            // Проверяем, существует ли еще шарик (его могли слить раньше)
+            if (body && body.world) {
+                // Эффект затухания перед исчезновением
+                let fadeEffect = setInterval(() => {
+                    if (container.alpha > 0) {
+                        container.alpha -= 0.1;
+                    } else {
+                        clearInterval(fadeEffect);
+                        removeBall(body);
+                        console.log("System Clean: Object 9 removed.");
+                    }
+                }, 50);
+            }
+        }, 10000); // 10000 мс = 10 секунд
+    }
+
     return body;
 }
 
@@ -442,34 +505,85 @@ function checkObjectStatus(s) {
             pendingUpdateIndex = i;
             confirmBtn.disabled = false;
             confirmBtn.classList.add('pending-action');
+            
             document.getElementById(`obj-${i}`).style.animation = "pulse-red 1s infinite";
+            document.querySelectorAll('.info-panel').forEach(p => p.classList.add('warning-flash'));
+            document.getElementById('game-container').classList.add('warning-flash');
+
+            const siren = document.getElementById('siren-sound');
+            if (siren) {
+                siren.loop = true;
+                siren.volume = 0.5;
+                siren.play().catch(e => console.log("Sound pending click interaction"));
+            }
         }
     });
 }
 
 confirmBtn.addEventListener('click', () => {
     if (pendingUpdateIndex === -1) return;
+    
     const i = pendingUpdateIndex;
-    const code = LORE_DATABASE.getUniqueCode();
-    activeKeys[code] = `> СЕКТОР_${i+1}: ${LORE_DATABASE.events[Math.floor(Math.random()*5)]}`;
-    document.getElementById('lore-display').style.display = "block";
-    document.getElementById('lore-display').innerHTML = `<span style='color:#ff1a1a;'>[KEY]:</span> <b>${code}</b>`;
+    const fileNumber = i + 1;
     const img = document.getElementById(`img-${i}`);
-    if(img) img.src = `./ruins${i+1}.png`; 
+    
+    // --- ГЕНЕРАЦИЯ КОДА ДЛЯ ДЕШИФРОВКИ ---
+    const secretCode = LORE_DATABASE.getUniqueCode(); // Создаем код (напр. CORE-A1B2)
+    const eventText = LORE_DATABASE.events[Math.floor(Math.random() * LORE_DATABASE.events.length)];
+    
+    // Сохраняем код в базу активных ключей, чтобы unlock-btn его принял
+    activeKeys[secretCode] = eventText;
+
+    // Выводим код в lore-display, чтобы пользователь его увидел
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `
+        <div style="border: 1px solid #ff1a1a; padding: 5px; margin-bottom: 10px;">
+            <span style="color: #ff1a1a;">[ENCRYPTED_DATA_RECOVERED]</span><br>
+            ACCESS_KEY: <b style="color: #fff; background: #220000;">${secretCode}</b><br>
+            <small>(copy)</small>
+        </div>
+    ` + lore.innerHTML; 
+
+    // --- ЛОГИКА СМЕНЫ КАРТИНКИ ---
+    if (img) {
+        img.src = `ruins${fileNumber}.png`;
+        setTimeout(() => { img.src = `newruins${fileNumber}.png`; }, 20000);
+    }
+
+    // --- ОСТАНОВКА ЭФФЕКТОВ ---
     confirmBtn.disabled = true;
     confirmBtn.classList.remove('pending-action');
     document.getElementById(`obj-${i}`).style.animation = "none";
+    document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('warning-flash'));
+    document.getElementById('game-container').classList.remove('warning-flash');
+
+    const siren = document.getElementById('siren-sound');
+    if (siren) { siren.pause(); siren.currentTime = 0; }
+
     pendingUpdateIndex = -1;
 });
+
+navigator.clipboard.writeText(secretCode);
+console.log("Код скопирован: " + secretCode);
 
 function checkAccessCode() {
     const val = document.getElementById('access-key').value.trim().toUpperCase();
     const lore = document.getElementById('lore-display');
+    
     lore.style.display = "block";
+    
     if (activeKeys[val]) {
-        lore.innerHTML = `<span style='color:#1aff1a;'>[DECRYPTED]</span><br>${activeKeys[val]}`;
+        // Выводим английский текст из базы
+        lore.innerHTML = `<div style="margin-bottom:10px;">
+            <span style='color:#1aff1a;'>[DECRYPTED_SUCCESS]</span><br>
+            <span style="color:#fff;">> ${activeKeys[val]}</span>
+        </div>` + lore.innerHTML;
+        
+        // Очищаем поле ввода после успеха
+        document.getElementById('access-key').value = "";
     } else {
-        lore.innerHTML = `<span style='color:#550000;'>[INVALID_KEY]</span>`;
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ACCESS_DENIED]: INVALID_KEY</div>` + lore.innerHTML;
     }
 }
 
@@ -484,6 +598,10 @@ async function pasteKeyFromClipboard() {
     const text = await navigator.clipboard.readText();
     document.getElementById('access-key').value = text;
 }
+
+
 </script>
+<audio id="siren-sound" src="sirena.mp3" preload="auto"></audio>
+<audio id="radio"></audio>
 </body>
 </html>
