@@ -632,6 +632,48 @@ function copyToClipboard(text) {
 
 const AdController = window.Adsgram.init({ blockId: "acc1bc7084494cf8b27cbdaf312fa0bb" });
 
+// 1. БОНУС ОЧКИ (+500 DATA)
+async function showAdForBonus() {
+    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    }
+
+    AdController.show().then((result) => {
+        if (result.done) {
+            score += 500;
+            document.getElementById('current-score').innerText = score;
+            checkObjectStatus(score); 
+
+            const lore = document.getElementById('lore-display');
+            lore.style.display = "block";
+            lore.innerHTML = `<div style="color:#1aff1a; border: 1px solid #1aff1a; padding: 5px; margin-bottom: 5px;">
+                [REWARD_CREDITED]<br>> +500 DATA_UNITS RECEIVED
+            </div>` + lore.innerHTML;
+        }
+    }).catch((err) => {
+        console.error("Ad error:", err);
+        // Для теста на ПК (где нет рекламы), можно раскомментировать строку ниже:
+        // applyAdBonus(); 
+    });
+}
+
+// 2. ОЧИСТКА ПОЛЯ (PURGE)
+async function showAdForClear() {
+    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+    }
+
+    AdController.show().then((result) => {
+        if (result.done) {
+            executePurgeProtocol();
+        }
+    }).catch((err) => {
+        console.error("Ad error:", err);
+        // Для теста на ПК можно раскомментировать:
+        // executePurgeProtocol();
+    });
+}
+
 function showAdForBonus() {
     AdController.show().then((result) => {
         
