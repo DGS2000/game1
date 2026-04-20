@@ -262,12 +262,20 @@ document.getElementById('start-overlay').addEventListener('click', () => {
     document.getElementById('start-overlay').style.display = 'none';
     bootScreen.style.display = 'flex';
 
-    gamePromise = initGame(); 
-
+    // Разблокировка звука
     const radio = document.getElementById('radio');
     radio.src = 'matrix.mp3';
-    radio.loop = false; 
+    radio.volume = 0.5;
+    
+    // Принудительный старт звука
+    const playPromise = radio.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.log("Автоплей заблокирован, ждем взаимодействия");
+        });
+    }
 
+    gamePromise = initGame(); 
     printLine();
 });
 
@@ -622,7 +630,7 @@ function copyToClipboard(text) {
     });
 }
 
-const AdController = window.Adsgram.init({ blockId: "YOUR_BLOCK_ID" });
+const AdController = window.Adsgram.init({ blockId: "acc1bc7084494cf8b27cbdaf312fa0bb" });
 
 function showAdForBonus() {
     AdController.show().then((result) => {
@@ -651,17 +659,27 @@ function applyAdBonus() {
 
 // Функция вызова рекламы для очистки
 function showAdForClear() {
-    // Если на поле пусто, даже не запускаем
-    if (world.bodies.filter(b => !b.isStatic && b.lvl !== undefined).length === 0) {
-        alert("SYSTEM_ERROR: No objects to purge.");
+    if (!window.Adsgram) {
+        console.error("Adsgram SDK не загружен");
+        return;
+    }
+
+    const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
+    if (activeBodies.length === 0) {
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[SYSTEM_ERROR]: NO_TARGETS</div>` + lore.innerHTML;
         return;
     }
 
     AdController.show().then((result) => {
-        // Реклама просмотрена — запускаем протокол очистки
         executePurgeProtocol();
     }).catch((err) => {
-        console.log("Ad failed or skipped");
+        console.error("Реклама не показана:", err);
+        // Если хотите разрешить чистку ДАЖЕ БЕЗ рекламы (для тестов), вызовите executePurgeProtocol() здесь
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[CONNECTION_LOST]: СИГНАЛ ПРЕРВАН</div>` + lore.innerHTML;
     });
 }
 
