@@ -4,28 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>System Terminal: Core Protocol v3</title>
+    <script src="https://adsgram.ai/sdk-v1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        /* Мигание для контейнера игры */
+        
 #game-container.warning-flash {
     animation: pulse-panel-red 1s infinite !important;
     border-width: 2px;
 }
-        /* Эффект для всей панели, когда она должна мигать */
+        
 .info-panel.warning-flash {
     animation: pulse-panel-red 1s infinite !important;
     border-width: 2px;
 }
 
-/* Сама анимация пульсации для границ блока */
+
 @keyframes pulse-panel-red {
     0% { border-color: #1aff1a; box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); }
     50% { border-color: #ff1a1a; box-shadow: 0 0 20px rgba(255, 26, 26, 0.8); }
     100% { border-color: #1aff1a; box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); }
 }
 
-/* Исправим также анимацию для города, чтобы она была заметнее */
 @keyframes pulse-red {
     50% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
 }
@@ -87,20 +87,20 @@
     justify-items: center; 
 }
         .object-monitor { 
-    width: 110px;  /* Фиксированная ширина как у NEXT_UNIT */
-    height: 110px; /* Фиксированная высота */
+    width: 110px; 
+    height: 110px; 
     border: 1px solid #1aff1a; 
     background: #000; 
     display: flex; 
     align-items: center; 
     justify-content: center; 
     overflow: hidden;
-    box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); /* Легкое свечение */
+    box-shadow: 0 0 5px rgba(26, 255, 26, 0.3);
 }
         .object-monitor img { 
-    max-width: 95px;  /* Ограничиваем размер картинки внутри */
+    max-width: 95px; 
     max-height: 95px; 
-    filter: brightness(1.2) contrast(1.1); /* Делаем чуть четче */
+    filter: brightness(1.2) contrast(1.1); 
     object-fit: contain;
 }
 
@@ -134,17 +134,17 @@
 
         @media screen and (max-width: 1000px) {
     body { 
-        padding: 40px 25px; /* Увеличили отступ сверху/снизу до 40px и с боков до 25px */
+        padding: 40px 25px; 
     }
 
     #ui-wrapper { 
         flex-direction: column; 
         align-items: center; 
-        gap: 30px; /* Увеличили расстояние между игрой и панелями */
+        gap: 30px; 
     }
 
     .info-panel { 
-        /* Вычитаем отступы body (25px * 2 = 50px), чтобы панель не вылезала за экран */
+        
         width: calc(100vw - 50px); 
         max-width: 400px; 
         min-height: auto; 
@@ -152,11 +152,10 @@
 
     #game-container { 
         order: -1; 
-        /* Чтобы контейнер игры тоже не прилипал к краям на очень узких телефонах */
         width: calc(100vw - 50px); 
         max-width: 400px; 
         height: auto;
-        aspect-ratio: 4 / 6; /* Сохраняем пропорции игры */
+        aspect-ratio: 4 / 6;
     }
 
     #game-container canvas {
@@ -198,6 +197,12 @@
     <div class="info-panel">
         <h2 class="panel-title">DATA</h2>
         <button id="confirm-btn" disabled>LAUNCH</button>
+        <button id="ad-btn" onclick="showAdForBonus()" style="width:100%; margin-top:10px; font-size:10px; border: 1px solid #ff1a1a; color: #ff1a1a;">
+    ⚡ BOOST_SIGNAL (AD)
+</button>
+<button id="ad-btn" onclick="showAdForClear()" style="width:100%; margin-top:10px; font-size:10px; border: 1px solid #ff1a1a; color: #ff1a1a; background: black; cursor: pointer;">
+    ⚡ BOOST_SIGNAL: PURGE (AD)
+</button>
         
         <div style="font-size: 11px; color: #1aff1a; text-align: center;">OBJECT_STATUS:</div>
         <div class="monitors-grid">
@@ -218,17 +223,12 @@
     </div>
 </div>
 
-<div id="radioPlayer">
-    <h1>Radio</h1>
-    <button onclick="playRadio()">PLAY</button> 
-    <button onclick="stopRadio()">STOP</button> 
-    <button onclick="nextTrack()">NEXT</button>
-</div>
+
 
 <audio id="radio"></audio>
 
 <script>
-// --- КОНФИГ И ДАННЫЕ ---
+
 const levels = [
     { r: 18, p: 2 }, { r: 26, p: 4 }, { r: 34, p: 8 }, 
     { r: 44, p: 16 }, { r: 54, p: 32 }, { r: 66, p: 64 }, 
@@ -253,10 +253,10 @@ let pendingUpdateIndex = -1;
 let loseLine, loseTimer = 0;
 const textures = {};
 
-// --- ЗАГРУЗКА ТЕРМИНАЛА ---
+
 const logElement = document.getElementById('boot-log');
 const bootScreen = document.getElementById('boot-screen');
-let gamePromise = null; // Переменная для хранения статуса загрузки игры
+let gamePromise = null; 
 
 document.getElementById('start-overlay').addEventListener('click', () => {
     document.getElementById('start-overlay').style.display = 'none';
@@ -266,8 +266,7 @@ document.getElementById('start-overlay').addEventListener('click', () => {
 
     const radio = document.getElementById('radio');
     radio.src = 'matrix.mp3';
-    radio.loop = false; // Добавь эту строку, чтобы точно не зацикливалось
-    radio.play().catch(() => {});
+    radio.loop = false; 
 
     printLine();
 });
@@ -309,14 +308,14 @@ function fillScreenWithMatrix() {
 
         if (rowCount >= maxRows) {
             clearInterval(interval);
-            // Когда матрица закончена, проверяем, готова ли игра
+            
             checkGameReady();
         }
     }, 40);
 }
 
 function checkGameReady() {
-    // Ждем завершения промиса игры перед показом финала
+    
     gamePromise.then(() => {
         setTimeout(showSuccess, 100);
     });
@@ -327,11 +326,11 @@ function showSuccess() {
     
     setTimeout(() => {
         bootScreen.style.display = 'none';
-        spawnNew(); // Запускаем первый шарик
+        spawnNew(); 
     }, 1000);
 }
 
-// --- ИГРОВАЯ ЛОГИКА ---
+
 async function initGame() {
     app = new PIXI.Application({
         width: 400, height: 600, backgroundAlpha: 0, antialias: true,
@@ -342,19 +341,19 @@ async function initGame() {
     engine = Matter.Engine.create();
     world = engine.world;
 
-    // Стенки
+    
     Matter.World.add(world, [
         Matter.Bodies.rectangle(200, 610, 400, 20, { isStatic: true }),
         Matter.Bodies.rectangle(-10, 300, 20, 600, { isStatic: true }),
         Matter.Bodies.rectangle(410, 300, 20, 600, { isStatic: true })
     ]);
 
-    // Линия проигрыша
+    
     loseLine = new PIXI.Graphics().beginFill(0xff0000, 0.2).drawRect(0, 0, 400, 2).endFill();
     loseLine.y = 110; 
     app.stage.addChild(loseLine);
 
-    // ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ТЕКСТУР
+    
     const assetPromises = [];
     for (let i = 1; i <= 10; i++) {
         assetPromises.push(PIXI.Assets.load(`./${i}.png`).catch(e => {
@@ -447,13 +446,11 @@ function createBall(x, y, lvl, isFalling) {
     body.sprite = container;
     Matter.World.add(world, body);
 
-    // --- ЛОГИКА УДАЛЕНИЯ 9-го ШАРИКА ---
-    // Если уровень шарика 8 (это 9-й по счету, так как отсчет от 0)
+    
     if (lvl === 8 && isFalling) {
         setTimeout(() => {
-            // Проверяем, существует ли еще шарик (его могли слить раньше)
             if (body && body.world) {
-                // Эффект затухания перед исчезновением
+                
                 let fadeEffect = setInterval(() => {
                     if (container.alpha > 0) {
                         container.alpha -= 0.1;
@@ -464,7 +461,7 @@ function createBall(x, y, lvl, isFalling) {
                     }
                 }, 50);
             }
-        }, 10000); // 10000 мс = 10 секунд
+        }, 10000); 
     }
 
     return body;
@@ -494,7 +491,7 @@ function triggerGameOver() {
     document.body.style.animation = "pulse-red 0.5s infinite";
 }
 
-// --- СИСТЕМА СОСТОЯНИЙ (БЕЗ ИЗМЕНЕНИЙ) ---
+
 const stateThresholds = [500, 1500, 3000, 5000];
 const confirmBtn = document.getElementById('confirm-btn');
 
@@ -527,31 +524,34 @@ confirmBtn.addEventListener('click', () => {
     const fileNumber = i + 1;
     const img = document.getElementById(`img-${i}`);
     
-    // --- ГЕНЕРАЦИЯ КОДА ДЛЯ ДЕШИФРОВКИ ---
-    const secretCode = LORE_DATABASE.getUniqueCode(); // Создаем код (напр. CORE-A1B2)
+    
+    const secretCode = LORE_DATABASE.getUniqueCode(); 
     const eventText = LORE_DATABASE.events[Math.floor(Math.random() * LORE_DATABASE.events.length)];
     
-    // Сохраняем код в базу активных ключей, чтобы unlock-btn его принял
+    
     activeKeys[secretCode] = eventText;
 
-    // Выводим код в lore-display, чтобы пользователь его увидел
+    
+    
     const lore = document.getElementById('lore-display');
     lore.style.display = "block";
     lore.innerHTML = `
-        <div style="border: 1px solid #ff1a1a; padding: 5px; margin-bottom: 10px;">
-            <span style="color: #ff1a1a;">[ENCRYPTED_DATA_RECOVERED]</span><br>
-            ACCESS_KEY: <b style="color: #fff; background: #220000;">${secretCode}</b><br>
-            <small>(copy)</small>
+        <div id="wrapper-${secretCode}" style="border: 1px solid #ff1a1a; padding: 10px; margin-bottom: 10px; background: rgba(40, 0, 0, 0.3);">
+            <span style="color: #ff1a1a; font-weight: bold;">[ENCRYPTED_DATA_RECOVERED]</span><br>
+            <div style="margin-top: 5px; display: flex; align-items: center; justify-content: space-between;">
+                <span>ACCESS_KEY: <b style="color: #fff; background: #220000; padding: 2px 5px;">${secretCode}</b></span>
+                <button onclick="copyToClipboard('${secretCode}')" style="font-size: 10px; padding: 2px 8px; border: 1px solid #1aff1a; background: transparent; color: #1aff1a; cursor: pointer;">[COPY]</button>
+            </div>
         </div>
-    ` + lore.innerHTML; 
+    ` + lore.innerHTML;
 
-    // --- ЛОГИКА СМЕНЫ КАРТИНКИ ---
+    
     if (img) {
         img.src = `ruins${fileNumber}.png`;
         setTimeout(() => { img.src = `newruins${fileNumber}.png`; }, 20000);
     }
 
-    // --- ОСТАНОВКА ЭФФЕКТОВ ---
+    
     confirmBtn.disabled = true;
     confirmBtn.classList.remove('pending-action');
     document.getElementById(`obj-${i}`).style.animation = "none";
@@ -571,23 +571,27 @@ function checkAccessCode() {
     const val = document.getElementById('access-key').value.trim().toUpperCase();
     const lore = document.getElementById('lore-display');
     
-    lore.style.display = "block";
-    
     if (activeKeys[val]) {
-        // Выводим английский текст из базы
-        lore.innerHTML = `<div style="margin-bottom:10px;">
+        
+        const keyWrapper = document.getElementById(`wrapper-${val}`);
+        if (keyWrapper) {
+            keyWrapper.remove();
+        }
+
+        
+        lore.innerHTML = `<div style="margin-bottom:10px; border-left: 2px solid #1aff1a; padding-left: 10px;">
             <span style='color:#1aff1a;'>[DECRYPTED_SUCCESS]</span><br>
             <span style="color:#fff;">> ${activeKeys[val]}</span>
         </div>` + lore.innerHTML;
         
-        // Очищаем поле ввода после успеха
         document.getElementById('access-key').value = "";
+        delete activeKeys[val]; 
     } else {
         lore.innerHTML = `<div style="color:#ff1a1a;">[ACCESS_DENIED]: INVALID_KEY</div>` + lore.innerHTML;
     }
 }
 
-// РАДИО
+
 const tracks = ["radio_static.mp3", "rad_low.mp3"];
 let currentTrack = 0;
 const r = document.getElementById('radio');
@@ -599,7 +603,96 @@ async function pasteKeyFromClipboard() {
     document.getElementById('access-key').value = text;
 }
 
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "[DONE]";
+        btn.style.color = "#fff";
+        btn.style.borderColor = "#fff";
+        
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.color = "#1aff1a";
+            btn.style.borderColor = "#1aff1a";
+        }, 1000);
+    }).catch(err => {
+        console.error("Ошибка копирования: ", err);
+    });
+}
 
+const AdController = window.Adsgram.init({ blockId: "YOUR_BLOCK_ID" });
+
+function showAdForBonus() {
+    AdController.show().then((result) => {
+        
+        console.log("Реклама просмотрена:", result);
+        applyAdBonus();
+    }).catch((result) => {
+        
+        console.log("Ошибка или пропуск:", result);
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[AD_ERROR]: СИГНАЛ ПРЕРВАН</div>` + lore.innerHTML;
+    });
+}
+
+function applyAdBonus() {
+    
+    score += 500;
+    document.getElementById('current-score').innerText = score;
+    checkObjectStatus(score); 
+
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `<div style="color:#1aff1a;">[REWARD_CREDITED]: +500 DATA_UNITS</div>` + lore.innerHTML;
+}
+
+// Функция вызова рекламы для очистки
+function showAdForClear() {
+    // Если на поле пусто, даже не запускаем
+    if (world.bodies.filter(b => !b.isStatic && b.lvl !== undefined).length === 0) {
+        alert("SYSTEM_ERROR: No objects to purge.");
+        return;
+    }
+
+    AdController.show().then((result) => {
+        // Реклама просмотрена — запускаем протокол очистки
+        executePurgeProtocol();
+    }).catch((err) => {
+        console.log("Ad failed or skipped");
+    });
+}
+
+function executePurgeProtocol() {
+    // Находим все активные шары (не статические стены)
+    const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
+    
+    if (activeBodies.length > 0) {
+        // Выбираем один случайный объект
+        const randomIndex = Math.floor(Math.random() * activeBodies.length);
+        const target = activeBodies[randomIndex];
+
+        // Эффект перед удалением (вспышка)
+        target.sprite.tint = 0xff0000; 
+        
+        setTimeout(() => {
+            removeBall(target);
+            
+            // Выводим отчет в терминал
+            const lore = document.getElementById('lore-display');
+            lore.style.display = "block";
+            lore.innerHTML = `
+                <div style="color: #ff1a1a; border: 1px solid #ff1a1a; padding: 5px; margin-bottom: 5px;">
+                    [SATELLITE_LINK_ESTABLISHED]<br>
+                    > TARGET_ELIMINATED: OBJ_${target.lvl}<br>
+                    > SECTOR_CLEANUP: SUCCESS
+                </div>
+            ` + lore.innerHTML;
+        }, 300);
+    }
+}
 </script>
 <audio id="siren-sound" src="sirena.mp3" preload="auto"></audio>
 <audio id="radio"></audio>
