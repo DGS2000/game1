@@ -197,12 +197,8 @@
     <div class="info-panel">
         <h2 class="panel-title">DATA</h2>
         <button id="confirm-btn" disabled>LAUNCH</button>
-        <button id="ad-btn" onclick="showAdForBonus()" style="width:100%; margin-top:10px; font-size:10px; border: 1px solid #ff1a1a; color: #ff1a1a;">
-    ⚡ BOOST_SIGNAL (AD)
-</button>
-<button id="ad-btn" onclick="showAdForClear()" style="width:100%; margin-top:10px; font-size:10px; border: 1px solid #ff1a1a; color: #ff1a1a; background: black; cursor: pointer;">
-    ⚡ BOOST_SIGNAL: PURGE (AD)
-</button>
+        <button id="ad-bonus-btn" onclick="showAdForBonus()" ...>⚡ BOOST_SIGNAL (AD)</button>
+<button id="ad-clear-btn" onclick="showAdForClear()" ...>⚡ BOOST_SIGNAL: PURGE (AD)</button>
         
         <div style="font-size: 11px; color: #1aff1a; text-align: center;">OBJECT_STATUS:</div>
         <div class="monitors-grid">
@@ -228,6 +224,27 @@
 <audio id="radio"></audio>
 
 <script>
+
+    // Move this to the top of your script block
+let AdController = null;
+
+async function showAdForClear() {
+    console.log("> Инициализация PURGE_PROTOCOL...");
+
+    // ADD THIS CHECK: Safely verify AdController exists and was initialized
+    if (!AdController) {
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[SYSTEM_ERROR]: ADS_NOT_READY</div>` + lore.innerHTML;
+        return;
+    }
+
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+    }
+
+    // ... rest of your code
+}
 
 const levels = [
     { r: 18, p: 2 }, { r: 26, p: 4 }, { r: 34, p: 8 }, 
@@ -534,6 +551,7 @@ confirmBtn.addEventListener('click', () => {
     
     
     const secretCode = LORE_DATABASE.getUniqueCode(); 
+    console.log("Код сгенерирован: " + secretCode);
     const eventText = LORE_DATABASE.events[Math.floor(Math.random() * LORE_DATABASE.events.length)];
     
     
@@ -572,8 +590,7 @@ confirmBtn.addEventListener('click', () => {
     pendingUpdateIndex = -1;
 });
 
-navigator.clipboard.writeText(secretCode);
-console.log("Код скопирован: " + secretCode);
+
 
 function checkAccessCode() {
     const val = document.getElementById('access-key').value.trim().toUpperCase();
@@ -630,128 +647,112 @@ function copyToClipboard(text) {
     });
 }
 
-const AdController = window.Adsgram.init({ blockId: "acc1bc7084494cf8b27cbdaf312fa0bb" });
+
+// Инициализируем сразу или по загрузке
+function initAds() {
+    if (window.Adsgram) {
+        AdController = window.Adsgram.init({ blockId: "acc1bc7084494cf8b27cbdaf312fa0bb" });
+        console.log("> ADSGRAM_INITIALIZED");
+    } else {
+        console.warn("> ADSGRAM_SDK_NOT_FOUND - Проверьте блокировщик рекламы или подключение");
+    }
+}
+
+window.addEventListener('load', initAds);
+// Дополнительная проверка, если скрипт загрузился раньше события load
+if (window.Adsgram && !AdController) initAds();
 
 // 1. БОНУС ОЧКИ (+500 DATA)
 async function showAdForBonus() {
-    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-    }
+    console.log("> INITIALIZING_BOOST_SIGNAL...");
 
-    AdController.show().then((result) => {
-        if (result.done) {
-            score += 500;
-            document.getElementById('current-score').innerText = score;
-            checkObjectStatus(score); 
-
-            const lore = document.getElementById('lore-display');
-            lore.style.display = "block";
-            lore.innerHTML = `<div style="color:#1aff1a; border: 1px solid #1aff1a; padding: 5px; margin-bottom: 5px;">
-                [REWARD_CREDITED]<br>> +500 DATA_UNITS RECEIVED
-            </div>` + lore.innerHTML;
-        }
-    }).catch((err) => {
-        console.error("Ad error:", err);
-        // Для теста на ПК (где нет рекламы), можно раскомментировать строку ниже:
+    if (!AdController) {
+        console.error("AdController not ready");
+        // Для тестов на ПК, если Adsgram не грузится:
         // applyAdBonus(); 
-    });
-}
-
-// 2. ОЧИСТКА ПОЛЯ (PURGE)
-async function showAdForClear() {
-    if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+        return;
     }
 
-    AdController.show().then((result) => {
+    try {
+        const result = await AdController.show();
         if (result.done) {
-            executePurgeProtocol();
+            applyAdBonus();
         }
-    }).catch((err) => {
-        console.error("Ad error:", err);
-        // Для теста на ПК можно раскомментировать:
-        // executePurgeProtocol();
-    });
-}
-
-function showAdForBonus() {
-    AdController.show().then((result) => {
-        
-        console.log("Реклама просмотрена:", result);
-        applyAdBonus();
-    }).catch((result) => {
-        
-        console.log("Ошибка или пропуск:", result);
+    } catch (err) {
+        console.log("Тестовый режим: выдаю бонус без рекламы");
+    applyAdBonus();
+        console.warn("AD_BLOCK_OR_ERROR:", err);
+        // Выводим ошибку прямо в терминал игры для диагностики
         const lore = document.getElementById('lore-display');
         lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[AD_ERROR]: СИГНАЛ ПРЕРВАН</div>` + lore.innerHTML;
-    });
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_FAILURE]: ${err.description || 'SIGNAL_LOST'}</div>` + lore.innerHTML;
+    }
 }
 
 function applyAdBonus() {
-    
     score += 500;
     document.getElementById('current-score').innerText = score;
     checkObjectStatus(score); 
 
     const lore = document.getElementById('lore-display');
     lore.style.display = "block";
-    lore.innerHTML = `<div style="color:#1aff1a;">[REWARD_CREDITED]: +500 DATA_UNITS</div>` + lore.innerHTML;
+    lore.innerHTML = `<div style="color:#1aff1a; border: 1px solid #1aff1a; padding: 5px; margin-bottom: 5px;">
+        [REWARD_CREDITED]<br>> +500 DATA_UNITS RECEIVED
+    </div>` + lore.innerHTML;
 }
 
-// Функция вызова рекламы для очистки
-function showAdForClear() {
-    if (!window.Adsgram) {
-        console.error("Adsgram SDK не загружен");
-        return;
-    }
+// 2. ОЧИСТКА ПОЛЯ (PURGE)
+async function showAdForClear() {
+    console.log("> Инициализация PURGE_PROTOCOL...");
 
-    const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
-    if (activeBodies.length === 0) {
+    // 1. Проверка наличия контроллера
+    if (!AdController) {
         const lore = document.getElementById('lore-display');
         lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[SYSTEM_ERROR]: NO_TARGETS</div>` + lore.innerHTML;
-        return;
-    }
-
-    AdController.show().then((result) => {
-        executePurgeProtocol();
-    }).catch((err) => {
-        console.error("Реклама не показана:", err);
-        // Если хотите разрешить чистку ДАЖЕ БЕЗ рекламы (для тестов), вызовите executePurgeProtocol() здесь
-        const lore = document.getElementById('lore-display');
-        lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[CONNECTION_LOST]: СИГНАЛ ПРЕРВАН</div>` + lore.innerHTML;
-    });
-}
-
-function executePurgeProtocol() {
-    // Находим все активные шары (не статические стены)
-    const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
-    
-    if (activeBodies.length > 0) {
-        // Выбираем один случайный объект
-        const randomIndex = Math.floor(Math.random() * activeBodies.length);
-        const target = activeBodies[randomIndex];
-
-        // Эффект перед удалением (вспышка)
-        target.sprite.tint = 0xff0000; 
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_OFFLINE]: Сигнал не найден. Проверьте соединение.</div>` + lore.innerHTML;
         
-        setTimeout(() => {
-            removeBall(target);
-            
-            // Выводим отчет в терминал
-            const lore = document.getElementById('lore-display');
-            lore.style.display = "block";
-            lore.innerHTML = `
-                <div style="color: #ff1a1a; border: 1px solid #ff1a1a; padding: 5px; margin-bottom: 5px;">
-                    [SATELLITE_LINK_ESTABLISHED]<br>
-                    > TARGET_ELIMINATED: OBJ_${target.lvl}<br>
-                    > SECTOR_CLEANUP: SUCCESS
-                </div>
-            ` + lore.innerHTML;
-        }, 300);
+        // ТЕСТОВЫЙ РЕЖИМ (раскомментируйте для тестов без рекламы):
+        // executePurgeProtocol(); 
+        return;
     }
+
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+    }
+
+    try {
+        // 2. Вызов рекламы с обработкой результата
+        const result = await AdController.show();
+        if (result.done) {
+            executePurgeProtocol();
+        }
+    } catch (err) {
+        console.error("Ad error:", err);
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[SIGNAL_LOST]: ${err.description || 'UNKNOWN_ERROR'}</div>` + lore.innerHTML;
+        
+        // Авто-выполнение для тестов, если реклама заблокирована
+        // executePurgeProtocol(); 
+    }
+}
+function executePurgeProtocol() {
+    const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
+    activeBodies.forEach(body => {
+        // Эффект растворения перед удалением (по желанию)
+        removeBall(body);
+    });
+
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `<div style="color:#1aff1a; border: 1px solid #1aff1a; padding: 5px; margin-bottom: 5px;">
+        [PURGE_COMPLETE]<br>> SECTOR_CLEARED_BY_SIGNAL
+    </div>` + lore.innerHTML;
+    
+    // Сброс таймера проигрыша, если он шел
+    loseTimer = 0;
+    isGameOver = false;
+    document.body.style.animation = "none";
 }
 </script>
 <audio id="siren-sound" src="sirena.mp3" preload="auto"></audio>
