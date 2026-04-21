@@ -2,86 +2,785 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adsgram Test Protocol</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>System Terminal: Core Protocol v3</title>
     <script src="https://adsgram.ai/sdk-v1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body { background: #001100; color: #1aff1a; font-family: monospace; padding: 20px; text-align: center; }
-        .terminal { border: 1px solid #1aff1a; padding: 20px; margin-bottom: 20px; background: #000; }
-        button { background: #1aff1a; color: #000; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; margin: 10px; }
-        #banner-container { min-height: 100px; border: 1px dashed #444; margin-top: 50px; display: flex; align-items: center; justify-content: center; }
-        .log { text-align: left; font-size: 12px; color: #888; }
+        
+#game-container.warning-flash {
+    animation: pulse-panel-red 1s infinite !important;
+    border-width: 2px;
+}
+        
+.info-panel.warning-flash {
+    animation: pulse-panel-red 1s infinite !important;
+    border-width: 2px;
+}
+
+
+@keyframes pulse-panel-red {
+    0% { border-color: #1aff1a; box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); }
+    50% { border-color: #ff1a1a; box-shadow: 0 0 20px rgba(255, 26, 26, 0.8); }
+    100% { border-color: #1aff1a; box-shadow: 0 0 5px rgba(26, 255, 26, 0.3); }
+}
+
+@keyframes pulse-red {
+    50% { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+}
+        body { 
+            margin: 0; padding: 20px; width: 100vw; min-height: 100vh; 
+            background-color: #001100;
+            background-image: 
+                radial-gradient(rgba(0, 150, 0, 0.2), black),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 100%, 100% 4px, 3px 100%;
+            color: #1aff1a; font-family: 'Courier New', Courier, monospace; 
+            display: flex; flex-direction: column; align-items: center;
+            overflow-y: auto; box-sizing: border-box; touch-action: pan-y; 
+        }
+
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 17, 0, 0.95); z-index: 10005;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
+        }
+
+        .blink-text { font-size: 1.5rem; letter-spacing: 5px; animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #001100; color: #1aff1a; padding: 20px;
+            z-index: 9999; display: none; flex-direction: column; text-shadow: 0 0 5px #1aff1a;
+        }
+
+        #boot-log { white-space: pre-wrap; line-height: 1.4; font-size: 12px; }
+
+        h1 { margin: 15px 0; font-size: 1.2rem; text-align: center; letter-spacing: 2px; }
+
+        #ui-wrapper { display: flex; gap: 20px; justify-content: center; align-items: flex-start; width: 100%; max-width: 1200px; margin-bottom: 20px; }
+        
+        .info-panel { 
+            width: 260px; min-height: 600px; border: 2px solid #1aff1a; padding: 15px; 
+            background: rgba(0, 10, 0, 0.8); text-shadow: 0 0 5px #1aff1a; 
+            box-sizing: border-box; flex-shrink: 0; display: flex; flex-direction: column; 
+        }
+
+        .panel-title { text-align: center; margin: 0 0 15px 0; font-size: 1.2rem; letter-spacing: 2px; border-bottom: 1px solid #1aff1a; padding-bottom: 5px; }
+        
+        #game-container { 
+            border: 2px solid #1aff1a; box-shadow: 0 0 15px #1aff1a55; 
+            background: rgba(0, 20, 0, 0.4); width: 400px; height: 600px; 
+            position: relative; touch-action: none;
+        }
+
+        #game-container canvas { display: block; width: 100%; height: 100%; }
+
+        .monitors-grid { 
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 12px; 
+    margin-top: 15px;
+    justify-items: center; 
+}
+        .object-monitor { 
+    width: 110px; 
+    height: 110px; 
+    border: 1px solid #1aff1a; 
+    background: #000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    overflow: hidden;
+    box-shadow: 0 0 5px rgba(26, 255, 26, 0.3);
+}
+        .object-monitor img { 
+    max-width: 95px; 
+    max-height: 95px; 
+    filter: brightness(1.2) contrast(1.1); 
+    object-fit: contain;
+}
+
+        .score-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #1aff1a33; }
+        
+        #next-preview { width: 100px; height: 100px; border: 1px solid #1aff1a; margin: 10px auto; display: flex; align-items: center; justify-content: center; background: #000; }
+        #next-img { max-width: 80px; max-height: 80px; }
+
+        #confirm-btn {
+            width: 100%; margin-bottom: 15px; padding: 12px; background: #000;
+            color: #004400; border: 2px solid #004400; font-family: 'Courier New', monospace;
+            font-weight: bold; text-transform: uppercase; cursor: default;
+        }
+        #confirm-btn.pending-action {
+            color: #ff1a1a; border-color: #ff1a1a; cursor: pointer;
+            box-shadow: 0 0 10px #ff1a1a; animation: pulse-border 1s infinite;
+        }
+
+        #lore-display {
+            max-height: 180px; overflow-y: auto; font-size: 11px; margin-top: 15px; 
+            padding: 10px; background: rgba(0,20,0,0.5); border: 1px solid #1aff1a33; display: none;
+        }
+
+        #radioPlayer { width: 400px; background: #000; border: 2px solid #1aff1a; padding: 15px; margin-top: 20px; display: flex; justify-content: center; gap: 20px; }
+        button { background: black; border: 1px solid #1aff1a; color: #1aff1a; padding: 5px 10px; cursor: pointer; font-family: 'Courier New'; }
+
+        @keyframes pulse-border { 50% { opacity: 0.5; } }
+        @keyframes pulse-red { 50% { border-color: #ff0000; } }
+
+        .copy-btn { border: 1px solid #1aff1a; background: transparent; color: #1aff1a; font-size: 10px; cursor: pointer; margin-left: 5px; }
+
+        @media screen and (max-width: 1000px) {
+    body { 
+        padding: 40px 25px; 
+    }
+
+    #ui-wrapper { 
+        flex-direction: column; 
+        align-items: center; 
+        gap: 30px; 
+    }
+
+    .info-panel { 
+        
+        width: calc(100vw - 50px); 
+        max-width: 400px; 
+        min-height: auto; 
+    }
+
+    #game-container { 
+        order: -1; 
+        width: calc(100vw - 50px); 
+        max-width: 400px; 
+        height: auto;
+        aspect-ratio: 4 / 6;
+    }
+
+    #game-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+#banner-container iframe { 
+    border: 1px solid #1aff1a !important; 
+    box-shadow: 0 0 10px rgba(26, 255, 26, 0.2);
+}
+}
     </style>
 </head>
 <body>
 
-    <div class="terminal">
-        <h1>> ADS_DIAGNOSTIC_MODE</h1>
-        <p>Если SDK загружен, кнопка ниже вызовет видео.</p>
-        <button onclick="showVideoAd()">[ ЗАПУСТИТЬ ТЕСТОВОЕ ВИДЕО ]</button>
-        <div class="log" id="status-log">> Ожидание инициализации...</div>
+<div id="start-overlay">
+    <div class="blink-text">[ CLICK TO INITIALIZE SYSTEM ]</div>
+</div>
+
+<div id="boot-screen">
+    <div id="boot-log"></div>
+</div>
+
+<h1>> SYSTEM_CORE_ONLINE</h1>
+
+<div id="ui-wrapper">
+    <div class="info-panel">
+        <h2 class="panel-title">PROTOCOL</h2>
+        <div class="score-item"><span>SCORE:</span><span id="current-score">0</span></div>
+        <div class="score-item"><span>RECORD:</span><span id="best-score">0</span></div>
+        
+        <div id="lore-display"></div>
+
+        <div style="margin-top: auto; text-align: center;">
+            <div style="font-size: 12px;">NEXT_UNIT:</div>
+            <div id="next-preview"><img id="next-img" src="" style="display:none;"></div>
+        </div>
     </div>
 
-    <div id="banner-container">
-        [ ТУТ ДОЛЖЕН БЫТЬ БАННЕР ]
+    <div id="game-container"></div>
+
+    <div class="info-panel">
+        <h2 class="panel-title">DATA</h2>
+        <button id="confirm-btn" disabled>LAUNCH</button>
+        <button id="ad-bonus-btn" onclick="showAdForBonus()" ...>⚡ BOOST_SIGNAL (AD)</button>
+<button id="ad-clear-btn" onclick="showAdForClear()" ...>⚡ BOOST_SIGNAL: PURGE (AD)</button>
+        
+        <div style="font-size: 11px; color: #1aff1a; text-align: center;">OBJECT_STATUS:</div>
+        <div class="monitors-grid">
+            <div class="object-monitor" id="obj-0"><img src="city1.png" id="img-0"></div>
+            <div class="object-monitor" id="obj-1"><img src="city2.png" id="img-1"></div>
+            <div class="object-monitor" id="obj-2"><img src="city3.png" id="img-2"></div>
+            <div class="object-monitor" id="obj-3"><img src="city4.png" id="img-3"></div>
+        </div>
+
+        <div id="decryption-sector" style="margin-top: 20px;">
+            <div style="font-size: 10px; color: #1aff1a;">> DECRYPTION_INPUT:</div>
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <input type="text" id="access-key" placeholder="KEY..." style="flex-grow:1; background:#000; border:1px solid #1aff1a; color:#1aff1a; font-family:'Courier New'; font-size:12px; padding:5px; outline:none;">
+                <button class="copy-btn" onclick="pasteKeyFromClipboard()">[PASTE]</button>
+            </div>
+            <button id="unlock-btn" onclick="checkAccessCode()" style="width:100%; margin-top:5px; font-size:10px;">EXECUTE_DECRYPTION</button>
+        </div>
     </div>
+</div>
+<div id="banner-container" style="width: 100%; display: flex; justify-content: center; margin-top: 20px; min-height: 50px;"></div>
 
-    <script>
-        const log = document.getElementById('status-log');
-        let videoAd = null;
 
-        function addLog(msg) {
-            log.innerHTML += `<br>> ${msg}`;
+<audio id="radio"></audio>
+
+<script>
+
+    // Move this to the top of your script block
+let AdController = null;
+
+async function showAdForClear() {
+    console.log("> Инициализация PURGE_PROTOCOL...");
+
+    // ADD THIS CHECK: Safely verify AdController exists and was initialized
+    if (!AdController) {
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[SYSTEM_ERROR]: ADS_NOT_READY</div>` + lore.innerHTML;
+        return;
+    }
+
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+    }
+
+    // ... rest of your code
+}
+
+const levels = [
+    { r: 18, p: 2 }, { r: 26, p: 4 }, { r: 34, p: 8 }, 
+    { r: 44, p: 16 }, { r: 54, p: 32 }, { r: 66, p: 64 }, 
+    { r: 78, p: 128 }, { r: 90, p: 256 }, { r: 105, p: 512 }, { r: 125, p: 1024 }
+];
+
+const LORE_DATABASE = {
+    events: [
+        "Project Echo detected: Sector purged by automated defense protocol.",
+        "Intercept: 'Signal fading. Archive evacuation failed. God save us.'",
+        "Radiation report: Levels stabilized for post-human habitation.",
+        "Log: Bio-signature 0. Protocol 'Compression' efficiency at 99.8%.",
+        "Anomaly detected: Self-replicating code found in complex ruins."
+    ],
+    getUniqueCode: () => "CORE-" + Math.random().toString(36).substring(2, 6).toUpperCase()
+};
+
+let app, engine, world;
+let score = 0, nextLevel = 0, currentBallBody = null, canSpawn = false, isGameOver = false;
+let activeKeys = {};
+let pendingUpdateIndex = -1;
+let loseLine, loseTimer = 0;
+const textures = {};
+
+
+const logElement = document.getElementById('boot-log');
+const bootScreen = document.getElementById('boot-screen');
+let gamePromise = null; 
+
+document.getElementById('start-overlay').addEventListener('click', () => {
+    document.getElementById('start-overlay').style.display = 'none';
+    bootScreen.style.display = 'flex';
+
+    // Разблокировка звука
+    const radio = document.getElementById('radio');
+    radio.src = 'matrix.mp3';
+    radio.volume = 0.5;
+    
+    // Принудительный старт звука
+    const playPromise = radio.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.log("Автоплей заблокирован, ждем взаимодействия");
+        });
+    }
+
+    gamePromise = initGame(); 
+    printLine();
+});
+
+const bootLines = ["> INITIALIZING...", "> LOADING CORE...", "> ACCESS GRANTED.", "> STARTING PROTOCOL..."];
+let lineIndex = 0;
+
+function printLine() {
+    if (lineIndex < bootLines.length) {
+        logElement.textContent += bootLines[lineIndex] + "\n";
+        lineIndex++;
+        setTimeout(printLine, 200);
+    } else {
+        setTimeout(fillScreenWithMatrix, 500);
+    }
+}
+
+function fillScreenWithMatrix() {
+    logElement.textContent = "";
+    logElement.style.fontSize = "11px";
+    logElement.style.textAlign = "left"; 
+    logElement.style.wordBreak = "break-all";
+    logElement.style.overflow = "hidden";
+    
+    const hexChars = "0123456789ABCDEF";
+    let rowCount = 0;
+    const maxRows = 60; 
+
+    const interval = setInterval(() => {
+        let line = "";
+        for(let i = 0; i < 6; i++) {
+            const addr = Array.from({length: 4}, () => hexChars[Math.floor(Math.random() * 16)]).join('');
+            const val = Math.random().toString(16).slice(2, 6).toUpperCase();
+            line += `[0x${addr}] ADDR_${val}:OK   `;
         }
 
-        // 1. Инициализация при загрузке
-        window.addEventListener('load', () => {
-            if (window.Adsgram) {
-                addLog("SDK найден. Инициализация...");
+        logElement.textContent = line + "\n" + logElement.textContent;
+        rowCount++;
+
+        if (rowCount >= maxRows) {
+            clearInterval(interval);
+            
+            checkGameReady();
+        }
+    }, 40);
+}
+
+function checkGameReady() {
+    
+    gamePromise.then(() => {
+        setTimeout(showSuccess, 100);
+    });
+}
+
+function showSuccess() {
+    logElement.innerHTML = "<div style='font-size:2rem; text-align:center; margin-top:20%;'>> SYSTEM READY</div>";
+    
+    setTimeout(() => {
+        bootScreen.style.display = 'none';
+        spawnNew(); 
+    }, 1000);
+}
+
+
+async function initGame() {
+    app = new PIXI.Application({
+        width: 400, height: 600, backgroundAlpha: 0, antialias: true,
+        resolution: window.devicePixelRatio || 2, autoDensity: true
+    });
+    document.getElementById('game-container').appendChild(app.view);
+
+    engine = Matter.Engine.create();
+    world = engine.world;
+
+    
+    Matter.World.add(world, [
+        Matter.Bodies.rectangle(200, 610, 400, 20, { isStatic: true }),
+        Matter.Bodies.rectangle(-10, 300, 20, 600, { isStatic: true }),
+        Matter.Bodies.rectangle(410, 300, 20, 600, { isStatic: true })
+    ]);
+
+    
+    loseLine = new PIXI.Graphics().beginFill(0xff0000, 0.2).drawRect(0, 0, 400, 2).endFill();
+    loseLine.y = 110; 
+    app.stage.addChild(loseLine);
+
+    
+    const assetPromises = [];
+    for (let i = 1; i <= 10; i++) {
+        assetPromises.push(PIXI.Assets.load(`./${i}.png`).catch(e => {
+            console.error(`Asset ${i}.png failed:`, e);
+            return null;
+        }));
+    }
+
+    const loaded = await Promise.all(assetPromises);
+    loaded.forEach((tex, i) => { if (tex) textures[i] = tex; });
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    
+    app.stage.on('pointermove', (e) => {
+        if (canSpawn && currentBallBody && !isGameOver) {
+            const radius = levels[currentBallBody.lvl].r;
+            let nx = Math.max(radius, Math.min(400 - radius, e.global.x));
+            Matter.Body.setPosition(currentBallBody, { x: nx, y: 60 });
+        }
+    });
+
+    app.stage.on('pointerup', () => {
+        if (canSpawn && currentBallBody && !isGameOver) {
+            canSpawn = false;
+            Matter.Body.setStatic(currentBallBody, false);
+            currentBallBody.isSensor = false;
+            currentBallBody = null;
+            setTimeout(spawnNew, 800);
+        }
+    });
+
+    Matter.Events.on(engine, 'collisionStart', (event) => {
+        event.pairs.forEach(pair => {
+            const a = pair.bodyA, b = pair.bodyB;
+            if (a.lvl !== undefined && a.lvl === b.lvl && a.lvl < 9 && !a.isMerging && !b.isMerging) {
+                a.isMerging = b.isMerging = true;
+                score += levels[a.lvl].p;
+                document.getElementById('current-score').innerText = score;
+                checkObjectStatus(score);
                 
-                // Используем ТЕСТОВЫЙ ID 272 (он работает без модерации)
-                videoAd = window.Adsgram.init({ blockId: "272" });
-                
-                addLog("Система готова к тесту.");
-                
-                // Пытаемся сразу отрисовать баннер (тоже тестовый)
-                showBanner();
-            } else {
-                addLog("<span style='color:red'>ОШИБКА: SDK НЕ ЗАГРУЖЕН! Выключите AdBlock.</span>");
+                const nx = (a.position.x + b.position.x) / 2;
+                const ny = (a.position.y + b.position.y) / 2;
+                setTimeout(() => {
+                    removeBall(a); removeBall(b);
+                    createBall(nx, ny, a.lvl + 1, true);
+                }, 10);
+            }
+        });
+    });
+
+    app.ticker.add(() => {
+        Matter.Engine.update(engine, app.ticker.deltaMS);
+        let isAnyBodyAbove = false;
+
+        world.bodies.forEach(body => {
+            if (body.sprite) {
+                body.sprite.x = body.position.x;
+                body.sprite.y = body.position.y;
+                body.sprite.rotation = body.angle;
+                if (!body.isStatic && body.position.y < 110 && !body.isMerging) isAnyBodyAbove = true;
             }
         });
 
-        // Функция показа видео
-        async function showVideoAd() {
-            if (!videoAd) {
-                addLog("Ошибка: Контроллер не готов.");
-                return;
-            }
+        if (isAnyBodyAbove && !isGameOver) {
+            loseTimer += app.ticker.deltaMS;
+            if (loseTimer > 1500) triggerGameOver();
+        } else {
+            loseTimer = 0;
+        }
+    });
+}
 
-            addLog("Запрос видео...");
-            try {
-                const result = await videoAd.show();
-                if (result.done) {
-                    addLog("<span style='color:yellow'>НАГРАДА ПОЛУЧЕНА! Просмотр завершен.</span>");
-                }
-            } catch (err) {
-                addLog("Ошибка показа: " + (err.description || "Сеть прервана"));
+function createBall(x, y, lvl, isFalling) {
+    const radius = levels[lvl].r;
+    const container = new PIXI.Container();
+    const sprite = new PIXI.Sprite(textures[lvl] || PIXI.Texture.WHITE);
+    sprite.anchor.set(0.5);
+    sprite.width = sprite.height = radius * 2;
+
+    const mask = new PIXI.Graphics().beginFill(0xffffff).drawCircle(0, 0, radius).endFill();
+    sprite.mask = mask;
+    container.addChild(sprite, mask);
+    app.stage.addChild(container);
+
+    const body = Matter.Bodies.circle(x, y, radius, {
+        restitution: 0.3, isStatic: !isFalling, isSensor: !isFalling
+    });
+    body.lvl = lvl; 
+    body.sprite = container;
+    Matter.World.add(world, body);
+
+    
+    if (lvl === 8 && isFalling) {
+        setTimeout(() => {
+            if (body && body.world) {
+                
+                let fadeEffect = setInterval(() => {
+                    if (container.alpha > 0) {
+                        container.alpha -= 0.1;
+                    } else {
+                        clearInterval(fadeEffect);
+                        removeBall(body);
+                        console.log("System Clean: Object 9 removed.");
+                    }
+                }, 50);
+            }
+        }, 10000); 
+    }
+
+    return body;
+}
+
+function removeBall(body) {
+    if (body.sprite) app.stage.removeChild(body.sprite);
+    Matter.World.remove(world, body);
+}
+
+function spawnNew() {
+    if(isGameOver) return;
+    currentBallBody = createBall(200, 60, nextLevel, false);
+    nextLevel = Math.floor(Math.random() * 4);
+    const ni = document.getElementById('next-img');
+    ni.src = `./${nextLevel + 1}.png`;
+    ni.style.display = 'block';
+    canSpawn = true;
+}
+
+function triggerGameOver() {
+    isGameOver = true;
+    canSpawn = false;
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `<span style='color:#ff1a1a;'>[SYSTEM_FAILURE]</span><br>Критическое переполнение буфера.`;
+    document.body.style.animation = "pulse-red 0.5s infinite";
+}
+
+
+const stateThresholds = [500, 1500, 3000, 5000];
+const confirmBtn = document.getElementById('confirm-btn');
+
+function checkObjectStatus(s) {
+    stateThresholds.forEach((t, i) => {
+        const img = document.getElementById(`img-${i}`);
+        if (s >= t && pendingUpdateIndex === -1 && img && !img.src.includes('ruins')) {
+            pendingUpdateIndex = i;
+            confirmBtn.disabled = false;
+            confirmBtn.classList.add('pending-action');
+            
+            document.getElementById(`obj-${i}`).style.animation = "pulse-red 1s infinite";
+            document.querySelectorAll('.info-panel').forEach(p => p.classList.add('warning-flash'));
+            document.getElementById('game-container').classList.add('warning-flash');
+
+            const siren = document.getElementById('siren-sound');
+            if (siren) {
+                siren.loop = true;
+                siren.volume = 0.5;
+                siren.play().catch(e => console.log("Sound pending click interaction"));
             }
         }
+    });
+}
 
-        // Функция показа баннера
-        function showBanner() {
-            window.Adsgram.init({ 
-                blockId: "272", // Используем тот же тестовый ID для типа баннер
-                type: "banner" 
-            }).render({
-                renderTo: 'banner-container'
-            }).then(() => {
-                addLog("Баннер успешно загружен.");
-            }).catch((err) => {
-                addLog("Ошибка баннера: " + err.description);
-            });
+confirmBtn.addEventListener('click', () => {
+    if (pendingUpdateIndex === -1) return;
+    
+    const i = pendingUpdateIndex;
+    const fileNumber = i + 1;
+    const img = document.getElementById(`img-${i}`);
+    
+    
+    const secretCode = LORE_DATABASE.getUniqueCode(); 
+    console.log("Код сгенерирован: " + secretCode);
+    const eventText = LORE_DATABASE.events[Math.floor(Math.random() * LORE_DATABASE.events.length)];
+    
+    
+    activeKeys[secretCode] = eventText;
+
+    
+    
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `
+        <div id="wrapper-${secretCode}" style="border: 1px solid #ff1a1a; padding: 10px; margin-bottom: 10px; background: rgba(40, 0, 0, 0.3);">
+            <span style="color: #ff1a1a; font-weight: bold;">[ENCRYPTED_DATA_RECOVERED]</span><br>
+            <div style="margin-top: 5px; display: flex; align-items: center; justify-content: space-between;">
+                <span>ACCESS_KEY: <b style="color: #fff; background: #220000; padding: 2px 5px;">${secretCode}</b></span>
+                <button onclick="copyToClipboard('${secretCode}')" style="font-size: 10px; padding: 2px 8px; border: 1px solid #1aff1a; background: transparent; color: #1aff1a; cursor: pointer;">[COPY]</button>
+            </div>
+        </div>
+    ` + lore.innerHTML;
+
+    
+    if (img) {
+        img.src = `ruins${fileNumber}.png`;
+        setTimeout(() => { img.src = `newruins${fileNumber}.png`; }, 20000);
+    }
+
+    
+    confirmBtn.disabled = true;
+    confirmBtn.classList.remove('pending-action');
+    document.getElementById(`obj-${i}`).style.animation = "none";
+    document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('warning-flash'));
+    document.getElementById('game-container').classList.remove('warning-flash');
+
+    const siren = document.getElementById('siren-sound');
+    if (siren) { siren.pause(); siren.currentTime = 0; }
+
+    pendingUpdateIndex = -1;
+});
+
+
+
+function checkAccessCode() {
+    const val = document.getElementById('access-key').value.trim().toUpperCase();
+    const lore = document.getElementById('lore-display');
+    
+    if (activeKeys[val]) {
+        
+        const keyWrapper = document.getElementById(`wrapper-${val}`);
+        if (keyWrapper) {
+            keyWrapper.remove();
         }
-    </script>
+
+        
+        lore.innerHTML = `<div style="margin-bottom:10px; border-left: 2px solid #1aff1a; padding-left: 10px;">
+            <span style='color:#1aff1a;'>[DECRYPTED_SUCCESS]</span><br>
+            <span style="color:#fff;">> ${activeKeys[val]}</span>
+        </div>` + lore.innerHTML;
+        
+        document.getElementById('access-key').value = "";
+        delete activeKeys[val]; 
+    } else {
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ACCESS_DENIED]: INVALID_KEY</div>` + lore.innerHTML;
+    }
+}
+
+
+const tracks = ["radio_static.mp3", "rad_low.mp3"];
+let currentTrack = 0;
+const r = document.getElementById('radio');
+function playRadio(){ r.play(); }
+function stopRadio(){ r.pause(); }
+function nextTrack(){ currentTrack = (currentTrack + 1) % tracks.length; r.src = tracks[currentTrack]; r.play(); }
+async function pasteKeyFromClipboard() {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('access-key').value = text;
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "[DONE]";
+        btn.style.color = "#fff";
+        btn.style.borderColor = "#fff";
+        
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.color = "#1aff1a";
+            btn.style.borderColor = "#1aff1a";
+        }, 1000);
+    }).catch(err => {
+        console.error("Ошибка копирования: ", err);
+    });
+}
+
+
+// Инициализируем сразу или по загрузке
+function initAds() {
+    if (window.Adsgram) {
+        AdController = window.Adsgram.init({ blockId: "272" });
+        console.log("> ADSGRAM_INITIALIZED");
+    } else {
+        console.warn("> ADSGRAM_SDK_NOT_FOUND - Проверьте блокировщик рекламы или подключение");
+    }
+}
+
+function showBottomBanner() {
+    if (window.Adsgram) {
+        // ВНИМАНИЕ: Для баннера обычно создается ОТДЕЛЬНЫЙ blockId в панели Adsgram.
+        // Если у тебя только один ID, попробуй использовать его, но лучше создай тип "Banner".
+        window.Adsgram.init({ 
+            blockId: "acc1bc7084494cf8b27cbdaf312fa0bb", // Замени на ID баннера, если есть
+            type: "banner" // Указываем тип
+        }).render({
+            renderTo: 'banner-container', // ID нашего дива
+            style: { margin: '10px auto' }
+        }).then(() => {
+            console.log("> BANNER_LOADED");
+        }).catch((err) => {
+            console.error("> BANNER_ERROR:", err);
+        });
+    }
+}
+
+// Вызываем показ баннера при загрузке
+window.addEventListener('load', showBottomBanner);
+
+window.addEventListener('load', initAds);
+// Дополнительная проверка, если скрипт загрузился раньше события load
+if (window.Adsgram && !AdController) initAds();
+
+// 1. БОНУС ОЧКИ (+500 DATA)
+async function showAdForBonus() {
+    console.log("> INITIALIZING_BOOST_SIGNAL...");
+
+    if (!AdController) {
+        console.error("AdController not ready");
+        // Для тестов на ПК, если Adsgram не грузится:
+        // applyAdBonus(); 
+        return;
+    }
+
+    try {
+        const result = await AdController.show();
+        if (result.done) {
+            applyAdBonus();
+        }
+    } catch (err) {
+        console.log("Тестовый режим: выдаю бонус без рекламы");
+    applyAdBonus();
+        console.warn("AD_BLOCK_OR_ERROR:", err);
+        // Выводим ошибку прямо в терминал игры для диагностики
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_FAILURE]: ${err.description || 'SIGNAL_LOST'}</div>` + lore.innerHTML;
+    }
+}
+
+function applyAdBonus() {
+    score += 500;
+    document.getElementById('current-score').innerText = score;
+    checkObjectStatus(score); 
+
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `<div style="color:#1aff1a; border: 1px solid #1aff1a; padding: 5px; margin-bottom: 5px;">
+        [REWARD_CREDITED]<br>> +500 DATA_UNITS RECEIVED
+    </div>` + lore.innerHTML;
+}
+
+// 2. ОЧИСТКА ПОЛЯ (PURGE)
+async function showAdForClear() {
+    console.log("> Инициализация PURGE_PROTOCOL...");
+
+    // 1. Проверка наличия контроллера
+    if (!AdController) {
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_OFFLINE]: Сигнал не найден. Проверьте соединение.</div>` + lore.innerHTML;
+        
+        // ТЕСТОВЫЙ РЕЖИМ (раскомментируйте для тестов без рекламы):
+        // executePurgeProtocol(); 
+        return;
+    }
+
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+    }
+
+    try {
+        // 2. Вызов рекламы с обработкой результата
+        const result = await AdController.show();
+        if (result.done) {
+            executePurgeProtocol();
+        }
+    } catch (err) {
+        console.error("Ad error:", err);
+        const lore = document.getElementById('lore-display');
+        lore.style.display = "block";
+        lore.innerHTML = `<div style="color:#ff1a1a;">[SIGNAL_LOST]: ${err.description || 'UNKNOWN_ERROR'}</div>` + lore.innerHTML;
+        
+        // Авто-выполнение для тестов, если реклама заблокирована
+        // executePurgeProtocol(); 
+    }
+}
+function executePurgeProtocol() {
+    const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
+    activeBodies.forEach(body => {
+        // Эффект растворения перед удалением (по желанию)
+        removeBall(body);
+    });
+
+    const lore = document.getElementById('lore-display');
+    lore.style.display = "block";
+    lore.innerHTML = `<div style="color:#1aff1a; border: 1px solid #1aff1a; padding: 5px; margin-bottom: 5px;">
+        [PURGE_COMPLETE]<br>> SECTOR_CLEARED_BY_SIGNAL
+    </div>` + lore.innerHTML;
+    
+    // Сброс таймера проигрыша, если он шел
+    loseTimer = 0;
+    isGameOver = false;
+    document.body.style.animation = "none";
+}
+</script>
+<audio id="siren-sound" src="sirena.mp3" preload="auto"></audio>
+<audio id="radio"></audio>
+
 </body>
 </html>
