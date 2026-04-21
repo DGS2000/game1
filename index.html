@@ -162,7 +162,10 @@
         width: 100% !important;
         height: 100% !important;
     }
-
+#banner-container iframe { 
+    border: 1px solid #1aff1a !important; 
+    box-shadow: 0 0 10px rgba(26, 255, 26, 0.2);
+}
 }
     </style>
 </head>
@@ -218,7 +221,7 @@
         </div>
     </div>
 </div>
-
+<div id="banner-container" style="width: 100%; display: flex; justify-content: center; margin-top: 20px; min-height: 50px;"></div>
 
 
 <audio id="radio"></audio>
@@ -658,6 +661,27 @@ function initAds() {
     }
 }
 
+function showBottomBanner() {
+    if (window.Adsgram) {
+        // ВНИМАНИЕ: Для баннера обычно создается ОТДЕЛЬНЫЙ blockId в панели Adsgram.
+        // Если у тебя только один ID, попробуй использовать его, но лучше создай тип "Banner".
+        window.Adsgram.init({ 
+            blockId: "acc1bc7084494cf8b27cbdaf312fa0bb", // Замени на ID баннера, если есть
+            type: "banner" // Указываем тип
+        }).render({
+            renderTo: 'banner-container', // ID нашего дива
+            style: { margin: '10px auto' }
+        }).then(() => {
+            console.log("> BANNER_LOADED");
+        }).catch((err) => {
+            console.error("> BANNER_ERROR:", err);
+        });
+    }
+}
+
+// Вызываем показ баннера при загрузке
+window.addEventListener('load', showBottomBanner);
+
 window.addEventListener('load', initAds);
 // Дополнительная проверка, если скрипт загрузился раньше события load
 if (window.Adsgram && !AdController) initAds();
@@ -757,5 +781,6 @@ function executePurgeProtocol() {
 </script>
 <audio id="siren-sound" src="sirena.mp3" preload="auto"></audio>
 <audio id="radio"></audio>
+
 </body>
 </html>
