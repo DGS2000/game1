@@ -7,6 +7,7 @@
     <script src="https://adsgram.ai/sdk-v1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script src='//libtl.com/sdk.js' data-zone='10929293' data-sdk='show_10929293'></script>
     <style>
         
 #game-container.warning-flash {
@@ -229,7 +230,7 @@
 <script>
 
     // Move this to the top of your script block
-let AdController = null;
+
 
 async function showAdForClear() {
     console.log("> Инициализация PURGE_PROTOCOL...");
@@ -652,12 +653,17 @@ function copyToClipboard(text) {
 
 
 // Инициализируем сразу или по загрузке
+// В начале скрипта, где объявляешь AdController
+let AdController = null;
+
+// Обнови функцию инициализации, чтобы видеть статус
 function initAds() {
     if (window.Adsgram) {
+        // ТВОЙ ID: 28296
         AdController = window.Adsgram.init({ blockId: "272" });
-        console.log("> ADSGRAM_INITIALIZED");
+        console.log("> ADSGRAM_INITIALIZED SUCCESS");
     } else {
-        console.warn("> ADSGRAM_SDK_NOT_FOUND - Проверьте блокировщик рекламы или подключение");
+        console.error("> ADSGRAM_SDK_NOT_LOADED_FROM_SERVER");
     }
 }
 
@@ -688,28 +694,35 @@ if (window.Adsgram && !AdController) initAds();
 
 // 1. БОНУС ОЧКИ (+500 DATA)
 async function showAdForBonus() {
-    console.log("> INITIALIZING_BOOST_SIGNAL...");
+    console.log("> INITIALIZING_MONETAG_SIGNAL...");
 
-    if (!AdController) {
-        console.error("AdController not ready");
-        // Для тестов на ПК, если Adsgram не грузится:
-        // applyAdBonus(); 
-        return;
-    }
-
-    try {
-        const result = await AdController.show();
-        if (result.done) {
-            applyAdBonus();
+    // Проверяем, загрузился ли SDK от Monetag
+    if (typeof window.show_10929293 === 'function') {
+        try {
+            // Вызываем функцию показа
+            // Monetag часто возвращает промис или использует callback
+            window.show_10929293().then(() => {
+                console.log("> REWARD_RECEIVED: +500 DATA");
+                applyAdBonus(); // Выдаем бонус игроку
+            }).catch((error) => {
+                console.error("Ошибка при показе Monetag:", error);
+                showLoreError("Сигнал прерван. Попробуйте позже.");
+            });
+        } catch (e) {
+            console.error("Критическая ошибка вызова:", e);
         }
-    } catch (err) {
-        console.log("Тестовый режим: выдаю бонус без рекламы");
-    applyAdBonus();
-        console.warn("AD_BLOCK_OR_ERROR:", err);
-        // Выводим ошибку прямо в терминал игры для диагностики
-        const lore = document.getElementById('lore-display');
+    } else {
+        console.error("Monetag SDK не найден");
+        showLoreError("АНТЕННА ПОВРЕЖДЕНА: Проверьте блокировщик рекламы.");
+    }
+}
+
+// Вспомогательная функция для вывода ошибок в твой стиль "Lore"
+function showLoreError(text) {
+    const lore = document.getElementById('lore-display');
+    if (lore) {
         lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_FAILURE]: ${err.description || 'SIGNAL_LOST'}</div>` + lore.innerHTML;
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ERROR]: ${text}</div>` + lore.innerHTML;
     }
 }
 
