@@ -203,7 +203,7 @@
         <button id="confirm-btn" disabled>LAUNCH</button>
         <button id="ad-bonus-btn" onclick="showAdForBonus()" ...>⚡ BOOST_SIGNAL (AD)</button>
 <button id="ad-clear-btn" onclick="showAdForClear()" ...>⚡ BOOST_SIGNAL: PURGE (AD)</button>
-        <div id="monetag-banner-inline" style="margin-top: 20px; min-height: 100px; border: 1px solid #1aff1a33;"></div>
+        
         <div style="font-size: 11px; color: #1aff1a; text-align: center;">OBJECT_STATUS:</div>
         <div class="monitors-grid">
             <div class="object-monitor" id="obj-0"><img src="city1.png" id="img-0"></div>
@@ -233,17 +233,21 @@
 
 
 async function showAdForClear() {
-    console.log("> Инициализация PURGE_PROTOCOL через Popup...");
+    console.log("> Инициализация PURGE_PROTOCOL через Monetag...");
 
     if (typeof window.show_10929293 === 'function') {
-        // Добавляем 'pop' для вызова именно поп-ап формата
-        window.show_10929293('pop').then(() => {
-            console.log("> PURGE_SIGNAL_CONFIRMED");
-            executePurgeProtocol(); // Твоя функция очистки
-        }).catch((e) => {
-            console.error("Popup ad error:", e);
-            showLoreError("Протокол PURGE отменен пользователем или системой.");
-        });
+        try {
+            // Вызываем ту же функцию Monetag
+            window.show_10929293().then(() => {
+                console.log("> PURGE_SIGNAL_RECEIVED");
+                executePurgeProtocol(); // Очищаем поле
+            }).catch((error) => {
+                console.error("Ошибка Monetag:", error);
+                showLoreError("Сигнал PURGE прерван.");
+            });
+        } catch (e) {
+            console.error("Ошибка вызова:", e);
+        }
     } else {
         showLoreError("СИСТЕМА ОЧИСТКИ OFFLINE: SDK не найден.");
     }
@@ -657,18 +661,13 @@ let AdController = null;
 
 // Обнови функцию инициализации, чтобы видеть статус
 function initAds() {
-    // Автоматическая фоновая реклама
-    show_10929293({
-        type: 'inApp',
-        inAppSettings: {
-            frequency: 2,
-            capping: 0.1,
-            interval: 30,
-            timeout: 5,
-            everyPage: false
-        }
-    });
-    console.log("> AUTO_AD_PROTCOLS_ACTIVE");
+    if (window.Adsgram) {
+        // ТВОЙ ID: 28296
+        AdController = window.Adsgram.init({ blockId: "272" });
+        console.log("> ADSGRAM_INITIALIZED SUCCESS");
+    } else {
+        console.error("> ADSGRAM_SDK_NOT_LOADED_FROM_SERVER");
+    }
 }
 
 function showBottomBanner() {
@@ -692,28 +691,32 @@ function showBottomBanner() {
 // Вызываем показ баннера при загрузке
 window.addEventListener('load', showBottomBanner);
 
-window.addEventListener('load', () => {
-    // 1. Убираем авто-показы (InApp), заменяем на баннер в интерфейсе
-    if (typeof window.show_10929293 === 'function') {
-        console.log("> INITIALIZING_STATIC_BANNER...");
-        // Вызываем баннер в наш спец-контейнер
-        window.show_10929293('banner', {
-            containerId: 'monetag-banner-inline'
-        });
-    }
-});
+window.addEventListener('load', initAds);
+// Дополнительная проверка, если скрипт загрузился раньше события load
+if (window.Adsgram && !AdController) initAds();
 
-
-// 1. БОНУС ОЧКИ (+500 DATA) - формат Rewarded Interstitial
+// 1. БОНУС ОЧКИ (+500 DATA)
 async function showAdForBonus() {
-    console.log("> Запрос на усиление сигнала (Bonus)...");
+    console.log("> INITIALIZING_MONETAG_SIGNAL...");
+
+    // Проверяем, загрузился ли SDK от Monetag
     if (typeof window.show_10929293 === 'function') {
-        // Формат 'pop' гарантирует, что реклама откроется в новом окне/вкладке и не перекроет канвас игры
-        window.show_10929293('pop').then(() => {
-            applyAdBonus(); 
-        }).catch((e) => {
-            showLoreError("СИГНАЛ ПРЕРВАН.");
-        });
+        try {
+            // Вызываем функцию показа
+            // Monetag часто возвращает промис или использует callback
+            window.show_10929293().then(() => {
+                console.log("> REWARD_RECEIVED: +500 DATA");
+                applyAdBonus(); // Выдаем бонус игроку
+            }).catch((error) => {
+                console.error("Ошибка при показе Monetag:", error);
+                showLoreError("Сигнал прерван. Попробуйте позже.");
+            });
+        } catch (e) {
+            console.error("Критическая ошибка вызова:", e);
+        }
+    } else {
+        console.error("Monetag SDK не найден");
+        showLoreError("АНТЕННА ПОВРЕЖДЕНА: Проверьте блокировщик рекламы.");
     }
 }
 
@@ -741,13 +744,6 @@ function applyAdBonus() {
 // 2. ОЧИСТКА ПОЛЯ (PURGE)
 async function showAdForClear() {
     console.log("> Инициализация PURGE_PROTOCOL...");
-    if (typeof window.show_10929293 === 'function') {
-        window.show_10929293('pop').then(() => {
-            executePurgeProtocol();
-        }).catch((e) => {
-            showLoreError("ПРОТОКОЛ ОТМЕНЕН.");
-        });
-    }
 
     // 1. Проверка наличия контроллера
     if (!AdController) {
