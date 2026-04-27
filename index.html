@@ -233,21 +233,24 @@
 
 
 async function showAdForClear() {
-    console.log("> Инициализация PURGE_PROTOCOL...");
+    console.log("> Инициализация PURGE_PROTOCOL через Monetag...");
 
-    // ADD THIS CHECK: Safely verify AdController exists and was initialized
-    if (!AdController) {
-        const lore = document.getElementById('lore-display');
-        lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[SYSTEM_ERROR]: ADS_NOT_READY</div>` + lore.innerHTML;
-        return;
+    if (typeof window.show_10929293 === 'function') {
+        try {
+            // Вызываем ту же функцию Monetag
+            window.show_10929293().then(() => {
+                console.log("> PURGE_SIGNAL_RECEIVED");
+                executePurgeProtocol(); // Очищаем поле
+            }).catch((error) => {
+                console.error("Ошибка Monetag:", error);
+                showLoreError("Сигнал PURGE прерван.");
+            });
+        } catch (e) {
+            console.error("Ошибка вызова:", e);
+        }
+    } else {
+        showLoreError("СИСТЕМА ОЧИСТКИ OFFLINE: SDK не найден.");
     }
-
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
-    }
-
-    // ... rest of your code
 }
 
 const levels = [
