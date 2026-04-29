@@ -167,6 +167,46 @@
     border: 1px solid #1aff1a !important; 
     box-shadow: 0 0 10px rgba(26, 255, 26, 0.2);
 }
+
+::-webkit-scrollbar {
+    width: 8px; /* Ширина полосы */
+    background: #001100; /* Фон под полосой в цвет body */
+    border-left: 1px solid #1aff1a33;
+}
+
+/* Настройка "ползунка" (thumb) */
+::-webkit-scrollbar-thumb {
+    background: #1aff1a; /* Основной цвет терминала */
+    box-shadow: 0 0 10px #1aff1a; /* Свечение ползунка */
+    border-radius: 0px; /* Оставляем острые углы для ретро-стиля */
+}
+
+/* Эффект при наведении на ползунок */
+::-webkit-scrollbar-thumb:hover {
+    background: #ffffff; /* Белое свечение при контакте */
+    box-shadow: 0 0 15px #ffffff;
+}
+
+/* Для Firefox (упрощенная стилизация) */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #1aff1a #001100;
+}
+.ad-buttons-container button {
+    background: rgba(26, 255, 26, 0.05);
+    border: 1px solid #1aff1a88;
+    transition: all 0.3s ease;
+}
+
+.ad-buttons-container button:hover {
+    background: rgba(26, 255, 26, 0.2);
+    box-shadow: 0 0 10px #1aff1a;
+}
+
+#decryption-sector {
+    border-top: 1px double #1aff1a; /* Линия разделения секторов */
+    padding-top: 15px;
+}
 }
     </style>
 </head>
@@ -201,8 +241,6 @@
     <div class="info-panel">
         <h2 class="panel-title">DATA</h2>
         <button id="confirm-btn" disabled>LAUNCH</button>
-        <button id="ad-bonus-btn" onclick="showAdForBonus()" ...>⚡ BOOST_SIGNAL (AD)</button>
-<button id="ad-clear-btn" onclick="showAdForClear()" ...>⚡ BOOST_SIGNAL: PURGE (AD)</button>
         
         <div style="font-size: 11px; color: #1aff1a; text-align: center;">OBJECT_STATUS:</div>
         <div class="monitors-grid">
@@ -212,7 +250,10 @@
             <div class="object-monitor" id="obj-3"><img src="city4.png" id="img-3"></div>
         </div>
 
-        <div id="decryption-sector" style="margin-top: 20px;">
+        <div id="decryption-sector" style="width: 100%; font-size: 10px;">
+            <button id="ad-bonus-btn" onclick="showAdForBonus()" style="width: 100%; font-size: 10px;" ...>⚡ BOOST_SIGNAL (AD)</button>
+<button id="ad-clear-btn" onclick="showAdForClear()" style="width: 100%; font-size: 10px;"...>⚡ BOOST_SIGNAL: PURGE (AD)</button>
+        &nbsp;
             <div style="font-size: 10px; color: #1aff1a;">> DECRYPTION_INPUT:</div>
             <div style="display: flex; gap: 5px; margin-top: 5px;">
                 <input type="text" id="access-key" placeholder="KEY..." style="flex-grow:1; background:#000; border:1px solid #1aff1a; color:#1aff1a; font-family:'Courier New'; font-size:12px; padding:5px; outline:none;">
@@ -229,7 +270,6 @@
 
 <script>
 
-    // Move this to the top of your script block
 
 
 async function showAdForClear() {
@@ -237,10 +277,9 @@ async function showAdForClear() {
 
     if (typeof window.show_10929293 === 'function') {
         try {
-            // Вызываем ту же функцию Monetag
             window.show_10929293().then(() => {
                 console.log("> PURGE_SIGNAL_RECEIVED");
-                executePurgeProtocol(); // Очищаем поле
+                executePurgeProtocol(); 
             }).catch((error) => {
                 console.error("Ошибка Monetag:", error);
                 showLoreError("Сигнал PURGE прерван.");
@@ -286,12 +325,10 @@ document.getElementById('start-overlay').addEventListener('click', () => {
     document.getElementById('start-overlay').style.display = 'none';
     bootScreen.style.display = 'flex';
 
-    // Разблокировка звука
     const radio = document.getElementById('radio');
     radio.src = 'matrix.mp3';
     radio.volume = 0.5;
     
-    // Принудительный старт звука
     const playPromise = radio.play();
     if (playPromise !== undefined) {
         playPromise.catch(error => {
@@ -452,7 +489,7 @@ async function initGame() {
 
         if (isAnyBodyAbove && !isGameOver) {
             loseTimer += app.ticker.deltaMS;
-            if (loseTimer > 1500) triggerGameOver();
+            if (loseTimer > 500) triggerGameOver();
         } else {
             loseTimer = 0;
         }
@@ -655,14 +692,12 @@ function copyToClipboard(text) {
 }
 
 
-// Инициализируем сразу или по загрузке
-// В начале скрипта, где объявляешь AdController
+
 let AdController = null;
 
-// Обнови функцию инициализации, чтобы видеть статус
+
 function initAds() {
     if (window.Adsgram) {
-        // ТВОЙ ID: 28296
         AdController = window.Adsgram.init({ blockId: "272" });
         console.log("> ADSGRAM_INITIALIZED SUCCESS");
     } else {
@@ -672,13 +707,11 @@ function initAds() {
 
 function showBottomBanner() {
     if (window.Adsgram) {
-        // ВНИМАНИЕ: Для баннера обычно создается ОТДЕЛЬНЫЙ blockId в панели Adsgram.
-        // Если у тебя только один ID, попробуй использовать его, но лучше создай тип "Banner".
         window.Adsgram.init({ 
-            blockId: "acc1bc7084494cf8b27cbdaf312fa0bb", // Замени на ID баннера, если есть
-            type: "banner" // Указываем тип
+            blockId: "acc1bc7084494cf8b27cbdaf312fa0bb", 
+            type: "banner" 
         }).render({
-            renderTo: 'banner-container', // ID нашего дива
+            renderTo: 'banner-container', 
             style: { margin: '10px auto' }
         }).then(() => {
             console.log("> BANNER_LOADED");
@@ -688,25 +721,20 @@ function showBottomBanner() {
     }
 }
 
-// Вызываем показ баннера при загрузке
 window.addEventListener('load', showBottomBanner);
 
 window.addEventListener('load', initAds);
-// Дополнительная проверка, если скрипт загрузился раньше события load
 if (window.Adsgram && !AdController) initAds();
 
-// 1. БОНУС ОЧКИ (+500 DATA)
 async function showAdForBonus() {
     console.log("> INITIALIZING_MONETAG_SIGNAL...");
 
-    // Проверяем, загрузился ли SDK от Monetag
+
     if (typeof window.show_10929293 === 'function') {
         try {
-            // Вызываем функцию показа
-            // Monetag часто возвращает промис или использует callback
             window.show_10929293().then(() => {
                 console.log("> REWARD_RECEIVED: +500 DATA");
-                applyAdBonus(); // Выдаем бонус игроку
+                applyAdBonus(); 
             }).catch((error) => {
                 console.error("Ошибка при показе Monetag:", error);
                 showLoreError("Сигнал прерван. Попробуйте позже.");
@@ -720,7 +748,6 @@ async function showAdForBonus() {
     }
 }
 
-// Вспомогательная функция для вывода ошибок в твой стиль "Lore"
 function showLoreError(text) {
     const lore = document.getElementById('lore-display');
     if (lore) {
@@ -741,18 +768,16 @@ function applyAdBonus() {
     </div>` + lore.innerHTML;
 }
 
-// 2. ОЧИСТКА ПОЛЯ (PURGE)
+
 async function showAdForClear() {
     console.log("> Инициализация PURGE_PROTOCOL...");
 
-    // 1. Проверка наличия контроллера
+
     if (!AdController) {
         const lore = document.getElementById('lore-display');
         lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_OFFLINE]: Сигнал не найден. Проверьте соединение.</div>` + lore.innerHTML;
+        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_OFFLINE]: ERROR</div>` + lore.innerHTML;
         
-        // ТЕСТОВЫЙ РЕЖИМ (раскомментируйте для тестов без рекламы):
-        // executePurgeProtocol(); 
         return;
     }
 
@@ -761,7 +786,6 @@ async function showAdForClear() {
     }
 
     try {
-        // 2. Вызов рекламы с обработкой результата
         const result = await AdController.show();
         if (result.done) {
             executePurgeProtocol();
@@ -771,15 +795,12 @@ async function showAdForClear() {
         const lore = document.getElementById('lore-display');
         lore.style.display = "block";
         lore.innerHTML = `<div style="color:#ff1a1a;">[SIGNAL_LOST]: ${err.description || 'UNKNOWN_ERROR'}</div>` + lore.innerHTML;
-        
-        // Авто-выполнение для тестов, если реклама заблокирована
-        // executePurgeProtocol(); 
+
     }
 }
 function executePurgeProtocol() {
     const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
     activeBodies.forEach(body => {
-        // Эффект растворения перед удалением (по желанию)
         removeBall(body);
     });
 
@@ -789,7 +810,6 @@ function executePurgeProtocol() {
         [PURGE_COMPLETE]<br>> SECTOR_CLEARED_BY_SIGNAL
     </div>` + lore.innerHTML;
     
-    // Сброс таймера проигрыша, если он шел
     loseTimer = 0;
     isGameOver = false;
     document.body.style.animation = "none";
