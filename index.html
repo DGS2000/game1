@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>System Terminal: Core Protocol v3</title>
+    <link rel="preconnect" href="//libtl.com">
+<link rel="dns-prefetch" href="//libtl.com">
     <script src="https://adsgram.ai/sdk-v1.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
@@ -122,9 +124,22 @@
         }
 
         #lore-display {
-            max-height: 180px; overflow-y: auto; font-size: 11px; margin-top: 15px; 
-            padding: 10px; background: rgba(0,20,0,0.5); border: 1px solid #1aff1a33; display: none;
-        }
+    max-height: 180px; 
+    overflow-y: auto; 
+    font-size: 11px; 
+    margin-top: 15px; 
+    padding: 10px; 
+    background: rgba(0,20,0,0.5); 
+    border: 1px solid #1aff1a33; 
+    display: none;
+
+    direction: rtl; 
+    text-align: left; 
+}
+
+#lore-display > * {
+    direction: ltr; 
+}
 
         #radioPlayer { width: 400px; background: #000; border: 2px solid #1aff1a; padding: 15px; margin-top: 20px; display: flex; justify-content: center; gap: 20px; }
         button { background: black; border: 1px solid #1aff1a; color: #1aff1a; padding: 5px 10px; cursor: pointer; font-family: 'Courier New'; }
@@ -303,25 +318,6 @@ body {
 
 
 
-async function showAdForClear() {
-    console.log("> Инициализация PURGE_PROTOCOL через Monetag...");
-
-    if (typeof window.show_10929293 === 'function') {
-        try {
-            window.show_10929293().then(() => {
-                console.log("> PURGE_SIGNAL_RECEIVED");
-                executePurgeProtocol(); 
-            }).catch((error) => {
-                console.error("Ошибка Monetag:", error);
-                showLoreError("Сигнал PURGE прерван.");
-            });
-        } catch (e) {
-            console.error("Ошибка вызова:", e);
-        }
-    } else {
-        showLoreError("СИСТЕМА ОЧИСТКИ OFFLINE: SDK не найден.");
-    }
-}
 
 const levels = [
     { r: 18, p: 2 }, { r: 26, p: 4 }, { r: 34, p: 8 }, 
@@ -585,6 +581,9 @@ function spawnNew() {
 function triggerGameOver() {
     isGameOver = true;
     canSpawn = false;
+
+    if (typeof window.show_10929293 === 'function') { window.show_10929293(); }
+
     const lore = document.getElementById('lore-display');
     lore.style.display = "block";
     lore.innerHTML = `<span style='color:#ff1a1a;'>[SYSTEM_FAILURE]</span><br>Критическое переполнение буфера.`;
@@ -718,7 +717,7 @@ function copyToClipboard(text) {
             btn.style.borderColor = "#1aff1a";
         }, 1000);
     }).catch(err => {
-        console.error("Ошибка копирования: ", err);
+        console.error("", err);
     });
 }
 
@@ -764,18 +763,21 @@ async function showAdForBonus() {
     if (typeof window.show_10929293 === 'function') {
         try {
             window.show_10929293().then(() => {
+                setTimeout(() => {
+        applyAdBonus(); 
+    }, 3000);
                 console.log("> REWARD_RECEIVED: +500 DATA");
                 applyAdBonus(); 
             }).catch((error) => {
-                console.error("Ошибка при показе Monetag:", error);
-                showLoreError("Сигнал прерван. Попробуйте позже.");
+                console.error("", error);
+                showLoreError("");
             });
         } catch (e) {
-            console.error("Критическая ошибка вызова:", e);
+            console.error("", e);
         }
     } else {
-        console.error("Monetag SDK не найден");
-        showLoreError("АНТЕННА ПОВРЕЖДЕНА: Проверьте блокировщик рекламы.");
+        console.error("");
+        showLoreError("");
     }
 }
 
@@ -801,34 +803,22 @@ function applyAdBonus() {
 
 
 async function showAdForClear() {
-    console.log("> Инициализация PURGE_PROTOCOL...");
-
-
-    if (!AdController) {
-        const lore = document.getElementById('lore-display');
-        lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[ADS_OFFLINE]: ERROR</div>` + lore.innerHTML;
-        
-        return;
-    }
-
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
-    }
-
-    try {
-        const result = await AdController.show();
-        if (result.done) {
-            executePurgeProtocol();
-        }
-    } catch (err) {
-        console.error("Ad error:", err);
-        const lore = document.getElementById('lore-display');
-        lore.style.display = "block";
-        lore.innerHTML = `<div style="color:#ff1a1a;">[SIGNAL_LOST]: ${err.description || 'UNKNOWN_ERROR'}</div>` + lore.innerHTML;
-
+    console.log("> INITIALIZING_PURGE_PROTOCOL...");
+    if (typeof window.show_10929293 === 'function') {
+        window.show_10929293().then(() => {
+            console.log("> PURGE_SUCCESS");
+            setTimeout(() => {
+        applyAdBonus(); 
+    }, 3000);
+            executePurgeProtocol(); 
+        }).catch((e) => {
+            showLoreError("");
+        });
+    } else {
+        showLoreError("PURGE OFFLINE");
     }
 }
+
 function executePurgeProtocol() {
     const activeBodies = world.bodies.filter(b => !b.isStatic && b.lvl !== undefined);
     activeBodies.forEach(body => {
@@ -844,6 +834,20 @@ function executePurgeProtocol() {
     loseTimer = 0;
     isGameOver = false;
     document.body.style.animation = "none";
+}
+
+async function showAdWithLoading(callback) {
+    console.log("> CONNECTING_TO_AD_SERVER...");
+
+    
+    if (typeof window.show_10929293 === 'function') {
+        try {
+            await window.show_10929293();
+            callback();
+        } catch (e) {
+            showLoreError("...");
+        }
+    }
 }
 </script>
 <audio id="siren-sound" src="sirena.mp3" preload="auto"></audio>
